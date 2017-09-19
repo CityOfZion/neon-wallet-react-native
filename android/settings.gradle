@@ -1,0 +1,3 @@
+rootProject.name = 'neonwallet'
+
+include ':app'
