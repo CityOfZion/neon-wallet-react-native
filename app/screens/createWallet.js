@@ -13,7 +13,7 @@ import { bindActionCreatorsExt } from '../utils/bindActionCreatorsExt'
 import { connect } from 'react-redux'
 import { ActionCreators } from '../actions'
 
-class Home extends React.Component {
+class CreateWallet extends React.Component {
     static navigationOptions = ({ navigation }) => ({
         headerLeftOnPress: () => {
             // requires https://github.com/react-community/react-navigation/pull/1291
@@ -171,4 +171,4 @@ function mapStateToProps(state, ownProps) {
 const mapDispatchToProps = dispatch => {
     return bindActionCreatorsExt(ActionCreators, dispatch)
 }
-export default connect(mapStateToProps, mapDispatchToProps)(Home)
+export default connect(mapStateToProps, mapDispatchToProps)(CreateWallet)
