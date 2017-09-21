@@ -4,7 +4,9 @@ import { StackNavigator } from 'react-navigation'
 // Screens
 import Home from '../screens/home.js'
 import CreateWallet from '../screens/createWallet.js'
+import LoginWallet from '../screens/loginWallet'
 //xxx import all remaining screens
+import { WalletTabBar } from '../navigators/WalletTabBarConfiguration'
 
 const defaultOptions = {
     // default options for the StackNavigator
@@ -31,6 +33,20 @@ const routeConfiguration = {
             ...defaultOptions,
             headerTitle: 'Create New Wallet'
             // tabBarVisible: false
+        }
+    },
+    LoginWallet: {
+        screen: LoginWallet,
+        navigationOptions: {
+            ...defaultOptions,
+            headerTitle: 'Login to existing Wallet'
+        }
+    },
+    WalletTabBar: {
+        screen: WalletTabBar,
+        navigationOptions: {
+            ...defaultOptions,
+            headerTitle: 'Wallet Overview'
         }
     }
 }

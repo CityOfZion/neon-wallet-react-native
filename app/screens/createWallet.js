@@ -4,7 +4,7 @@ import { DropDownHolder } from '../utils/DropDownHolder'
 import Button from '../components/Button'
 import KeyDataRow from '../components/KeyDataRow'
 import GeneratedKeysView from '../components/GeneratedKeysView'
-import { resetWalletState } from '../actions/wallet'
+import { resetState } from '../actions/wallet'
 
 import { BarIndicator } from 'react-native-indicators'
 
@@ -17,7 +17,7 @@ class CreateWallet extends React.Component {
     static navigationOptions = ({ navigation }) => ({
         headerLeftOnPress: () => {
             // requires https://github.com/react-community/react-navigation/pull/1291
-            navigation.dispatch(resetWalletState())
+            navigation.dispatch(resetState())
             navigation.goBack()
         }
     })
@@ -104,7 +104,7 @@ class CreateWallet extends React.Component {
         const { generating, wif, passphrase, address, encryptedWif } = this.props
         return (
             <View style={styles.main}>
-                {!generating && wif == null ? this._renderPassphraseEntry() : null}
+                {wif == null ? this._renderPassphraseEntry() : null}
                 {generating ? this._renderBarIndicator() : null}
                 {!generating && wif != null ? (
                     <GeneratedKeysView
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         marginVertical: 5,
         paddingLeft: 10,
-        height: 40,
+        height: 30,
         fontSize: 14,
         backgroundColor: '#E8F4E5',
         color: '#333333'

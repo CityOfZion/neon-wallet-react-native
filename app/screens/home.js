@@ -3,9 +3,8 @@ import { View, Text, Image, StyleSheet } from 'react-native'
 import Tile from '../components/Tile'
 
 class Home extends React.Component {
-    _createNewWallet() {
-        console.log('creating new wallet')
-        this.props.navigation.navigate('CreateWallet')
+    _goToScreen(screenName) {
+        this.props.navigation.navigate(screenName)
     }
 
     render() {
@@ -13,12 +12,15 @@ class Home extends React.Component {
             <View style={styles.main}>
                 <Image style={styles.logo} source={require('../images/neon-logo2.png')} resizeMode="contain" />
                 <View style={styles.tiles}>
-                    <Tile title="Create a new wallet" dark onPress={this._createNewWallet.bind(this)} />
-                    <Tile title="Login using a saved wallet" />
+                    <Tile title="Create a new wallet" dark onPress={() => this._goToScreen('CreateWallet')} />
+                    <Tile title="Login using a saved wallet" onPress={() => this._goToScreen('LoginWallet')} />
                     <Tile title="Encrypt an existing key" dark />
                     <Tile title="Login using an encrypted key" />
                     <Tile title="Manage neon settings" dark />
-                    <Tile title="Login using a private key" />
+                    <Tile
+                        title="Login using a private key"
+                        onPress={() => this.props.navigation.dispatch({ type: 'WALLET/LOGIN_SUCCESS' })}
+                    />
                 </View>
             </View>
         )

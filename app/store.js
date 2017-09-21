@@ -27,7 +27,10 @@ let initialState = {
         passphrase: null,
         encryptedWif: null,
         generating: false,
-        saved_keys: {} // key: name
+        saved_keys: {}, // key: name
+        decrypting: false,
+        loggedIn: false,
+        logInError: null
     }
 }
 
