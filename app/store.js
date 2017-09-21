@@ -20,7 +20,16 @@ const middleware = () => {
     return applyMiddleware(sagaMiddleWare, loggerMiddleware)
 }
 
-let initialState = {}
+let initialState = {
+    wallet: {
+        wif: null,
+        address: null,
+        passphrase: null,
+        encryptedWif: null,
+        generating: false,
+        saved_keys: {} // key: name
+    }
+}
 
 const store = createStore(reducer, initialState, middleware())
 // https://github.com/rt2zz/redux-persist/issues/126   store overwritting might be solved like this

@@ -1,6 +1,12 @@
 import React from 'react'
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native'
+import { View, Text, StyleSheet, TextInput } from 'react-native'
 import { DropDownHolder } from '../utils/DropDownHolder'
+import Button from '../components/Button'
+import KeyDataRow from '../components/KeyDataRow'
+import GeneratedKeysView from '../components/GeneratedKeysView'
+import { resetWalletState } from '../actions/wallet'
+
+import { BarIndicator } from 'react-native-indicators'
 
 // redux
 import { bindActionCreatorsExt } from '../utils/bindActionCreatorsExt'
@@ -8,10 +14,19 @@ import { connect } from 'react-redux'
 import { ActionCreators } from '../actions'
 
 class Home extends React.Component {
+    static navigationOptions = ({ navigation }) => ({
+        headerLeftOnPress: () => {
+            // requires https://github.com/react-community/react-navigation/pull/1291
+            navigation.dispatch(resetWalletState())
+            navigation.goBack()
+        }
+    })
+
     constructor(props) {
         super(props)
         this.dropdown = DropDownHolder.getDropDown()
     }
+
     _generateKeys() {
         if (this._isValidInput()) {
             const current_phrase = this.txtInput1._lastNativeText
@@ -21,7 +36,7 @@ class Home extends React.Component {
 
     _isValidInput() {
         // test if input contains content
-        result = false
+        var result = false
         if (this.txtInput1._lastNativeText && this.txtInput2._lastNativeText) {
             if (this.txtInput1._lastNativeText.length < 5) {
                 this.dropdown.alertWithType('error', 'Error', 'Passphrase too short. Minimal 5 characters.')
@@ -36,9 +51,9 @@ class Home extends React.Component {
         return result
     }
 
-    render() {
+    _renderPassphraseEntry() {
         return (
-            <View style={styles.main}>
+            <View style={{ marginTop: 20 }}>
                 <Text style={styles.instructionText}>Choose a passphrase to encrypt your private key</Text>
                 <TextInput
                     ref={txtInput => {
@@ -64,9 +79,42 @@ class Home extends React.Component {
                     autoCorrect={false}
                     secureTextEntry={true}
                 />
-                <TouchableOpacity onPress={this._generateKeys.bind(this)} style={styles.button}>
-                    <Text style={styles.buttonText}>Generate keys</Text>
-                </TouchableOpacity>
+                <Button onPress={this._generateKeys.bind(this)} title="Generate keys" />
+            </View>
+        )
+    }
+
+    _renderBarIndicator() {
+        // don't use until key generation duration becomes less than 1/60 or it will block the animation
+        // <View style={{ flexDirection: 'row' }}>
+        //     <BarIndicator color="#236312" count={5} />
+        // </View>
+        return (
+            <View style={styles.indicatorView}>
+                <Text style={styles.indicatorText}>Generating...</Text>
+            </View>
+        )
+    }
+
+    _saveKey(key_name) {
+        this.props.wallet.saveKey(this.props.encryptedWif, key_name)
+    }
+
+    render() {
+        const { generating, wif, passphrase, address, encryptedWif } = this.props
+        return (
+            <View style={styles.main}>
+                {!generating && wif == null ? this._renderPassphraseEntry() : null}
+                {generating ? this._renderBarIndicator() : null}
+                {!generating && wif != null ? (
+                    <GeneratedKeysView
+                        wif={wif}
+                        passphrase={passphrase}
+                        address={address}
+                        encryptedWif={encryptedWif}
+                        saveKeyCallback={this._saveKey.bind(this)}
+                    />
+                ) : null}
             </View>
         )
     }
@@ -75,7 +123,6 @@ class Home extends React.Component {
 const styles = StyleSheet.create({
     main: {
         flex: 1,
-        marginTop: 20,
         flexDirection: 'column',
         justifyContent: 'flex-start'
     },
@@ -89,27 +136,39 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         marginVertical: 5,
         paddingLeft: 10,
-        // paddingTop: 5,
         height: 40,
         fontSize: 14,
         backgroundColor: '#E8F4E5',
         color: '#333333'
     },
-    button: {
-        backgroundColor: '#4D933B',
-        marginHorizontal: 20,
-        height: 40,
-        marginTop: 10,
+    indicatorView: {
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        position: 'absolute',
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
+        backgroundColor: '#AAAAAA66'
     },
-    buttonText: {
-        color: 'white',
-        fontSize: 14
+    indicatorText: {
+        fontSize: 18,
+        color: '#333',
+        fontWeight: 'bold'
     }
 })
+
+function mapStateToProps(state, ownProps) {
+    return {
+        wif: state.wallet.wif,
+        address: state.wallet.address,
+        passphrase: state.wallet.passphrase,
+        encryptedWif: state.wallet.encryptedWif,
+        generating: state.wallet.generating
+    }
+}
 
 const mapDispatchToProps = dispatch => {
     return bindActionCreatorsExt(ActionCreators, dispatch)
 }
-export default connect(null, mapDispatchToProps)(Home)
+export default connect(mapStateToProps, mapDispatchToProps)(Home)

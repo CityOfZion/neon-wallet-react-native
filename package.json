@@ -12,6 +12,7 @@
     "react": "16.0.0-alpha.12",
     "react-native": "0.48.3",
     "react-native-dropdownalert": "^2.11.0",
+    "react-native-indicators": "^0.10.0",
     "react-navigation": "^1.0.0-beta.11",
     "react-redux": "^5.0.6",
     "redux": "^3.7.2",

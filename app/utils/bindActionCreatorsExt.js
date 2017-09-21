@@ -14,7 +14,7 @@ function bindObject(actionCreators, dispatch) {
             boundActionCreators[key] = bindActionCreator(actionCreator, dispatch)
         }
         if (typeof actionCreator === 'object') {
-            objs = bindObject(actionCreator, dispatch)
+            var objs = bindObject(actionCreator, dispatch)
             if (Object.keys(objs).length > 0) {
                 boundActionCreators[key] = objs
             }
