@@ -171,7 +171,6 @@ const styles = StyleSheet.create({
     },
     coinCountView: {
         flexDirection: 'column',
-        // backgroundColor: 'red',
         flex: 0.35,
         alignItems: 'center' // horizontal
     },
@@ -185,7 +184,6 @@ const styles = StyleSheet.create({
     },
     refreshButtonView: {
         flexDirection: 'column',
-        // backgroundColor: 'blue',
         flex: 0.3,
         alignItems: 'center', // horizontal
         justifyContent: 'center'

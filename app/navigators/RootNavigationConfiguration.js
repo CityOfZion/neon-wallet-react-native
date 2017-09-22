@@ -5,8 +5,8 @@ import { StackNavigator } from 'react-navigation'
 import Home from '../screens/home.js'
 import CreateWallet from '../screens/createWallet.js'
 import LoginWallet from '../screens/loginWallet'
-//xxx import all remaining screens
 import { WalletTabBar } from '../navigators/WalletTabBarConfiguration'
+//xxx import all remaining screens
 
 const defaultOptions = {
     // default options for the StackNavigator

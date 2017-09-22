@@ -21,7 +21,7 @@ export default function navigation(state, action) {
             return RootStackNavigator.router.getStateForAction(reset_action, state)
 
         default:
-            var newState = RootStackNavigator.router.getStateForAction(action, state)
+            let newState = RootStackNavigator.router.getStateForAction(action, state)
             return newState ? newState : state
     }
 }

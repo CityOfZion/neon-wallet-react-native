@@ -5,16 +5,16 @@ function bindActionCreator(actionCreator, dispatch) {
 }
 
 function bindObject(actionCreators, dispatch) {
-    var keys = Object.keys(actionCreators)
-    var boundActionCreators = {}
-    for (var i = 0; i < keys.length; i++) {
-        var key = keys[i]
-        var actionCreator = actionCreators[key]
+    let keys = Object.keys(actionCreators)
+    let boundActionCreators = {}
+    for (let i = 0; i < keys.length; i++) {
+        let key = keys[i]
+        let actionCreator = actionCreators[key]
         if (typeof actionCreator === 'function') {
             boundActionCreators[key] = bindActionCreator(actionCreator, dispatch)
         }
         if (typeof actionCreator === 'object') {
-            var objs = bindObject(actionCreator, dispatch)
+            let objs = bindObject(actionCreator, dispatch)
             if (Object.keys(objs).length > 0) {
                 boundActionCreators[key] = objs
             }
@@ -37,7 +37,7 @@ export function bindActionCreatorsExt(actionCreators, dispatch) {
         )
     }
 
-    var boundActionCreators = bindObject(actionCreators, dispatch)
+    let boundActionCreators = bindObject(actionCreators, dispatch)
 
     return boundActionCreators
 }
