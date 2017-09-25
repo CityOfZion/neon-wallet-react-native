@@ -30,7 +30,14 @@ let initialState = {
         saved_keys: {}, // key: name
         decrypting: false,
         loggedIn: false,
-        logInError: null
+        logInError: null,
+        neo: 0,
+        gas: 0,
+        price: 0.0,
+        transactions: []
+    },
+    network: {
+        net: 'TestNet'
     }
 }
 

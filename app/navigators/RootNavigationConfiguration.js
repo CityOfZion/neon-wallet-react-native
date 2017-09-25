@@ -5,6 +5,7 @@ import { StackNavigator } from 'react-navigation'
 import Home from '../screens/home.js'
 import CreateWallet from '../screens/createWallet.js'
 import LoginWallet from '../screens/loginWallet'
+import LoginPrivateKey from '../screens/loginPrivateKey'
 import { WalletTabBar } from '../navigators/WalletTabBarConfiguration'
 //xxx import all remaining screens
 
@@ -47,6 +48,13 @@ const routeConfiguration = {
         navigationOptions: {
             ...defaultOptions,
             headerTitle: 'Wallet Overview'
+        }
+    },
+    LoginWithPrivateKey: {
+        screen: LoginPrivateKey,
+        navigationOptions: {
+            ...defaultOptions,
+            headerTitle: 'Login with private key'
         }
     }
 }

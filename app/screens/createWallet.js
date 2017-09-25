@@ -30,7 +30,7 @@ class CreateWallet extends React.Component {
     _generateKeys() {
         if (this._isValidInput()) {
             const current_phrase = this.txtInput1._lastNativeText
-            this.props.wallet.createWallet(current_phrase)
+            this.props.wallet.create(current_phrase)
         }
     }
 

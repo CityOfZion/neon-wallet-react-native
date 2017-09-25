@@ -40,10 +40,10 @@ export default function order(state = {}, action) {
                 decrypting: true
             }
         case actions.wallet.LOGIN_SUCCESS:
-            const account = getAccountsFromWIFKey(action.plain_key)[0]
+            const account = getAccountsFromWIFKey(action.plainKey)[0]
             return {
                 ...state,
-                wif: action.plain_key,
+                wif: action.plainKey,
                 address: account.address,
                 decrypting: false,
                 loggedIn: true
@@ -59,6 +59,39 @@ export default function order(state = {}, action) {
             return {
                 ...state,
                 loggedIn: false
+            }
+        }
+        case actions.wallet.GET_BALANCE_SUCCESS: {
+            return {
+                ...state,
+                neo: action.neo,
+                gas: action.gas
+            }
+        }
+        case actions.wallet.GET_MARKET_PRICE_SUCCESS: {
+            return {
+                ...state,
+                price: action.price
+            }
+        }
+        case actions.wallet.GET_TRANSACTION_HISTORY_SUCCESS: {
+            let transactions = action.transactions
+            let txs = []
+            for (let i = 0; i < transactions.length; i++) {
+                if (transactions[i].neo_sent === true) {
+                    txs = txs.concat([
+                        { type: 'NEO', amount: transactions[i].NEO, txid: transactions[i].txid, block_index: transactions[i].block_index }
+                    ])
+                }
+                if (transactions[i].gas_sent === true) {
+                    txs = txs.concat([
+                        { type: 'GAS', amount: transactions[i].GAS, txid: transactions[i].txid, block_index: transactions[i].block_index }
+                    ])
+                }
+            }
+            return {
+                ...state,
+                transactions: txs
             }
         }
         default:

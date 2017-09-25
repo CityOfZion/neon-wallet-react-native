@@ -3,11 +3,15 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-nativ
 import FAIcons from 'react-native-vector-icons/FontAwesome'
 import Button from '../../components/Button'
 import Spacer from '../../components/Spacer'
+import { ASSET_TYPE } from '../../actions/wallet'
+import { DropDownHolder } from '../../utils/DropDownHolder'
 
 // redux
 import { connect } from 'react-redux'
 import { bindActionCreatorsExt } from '../../utils/bindActionCreatorsExt'
 import { ActionCreators } from '../../actions'
+
+import { verifyAddress } from 'neon-js'
 
 class WalletInfo extends React.Component {
     static navigationOptions = ({ navigation }) => ({
@@ -34,6 +38,14 @@ class WalletInfo extends React.Component {
         )
     })
 
+    constructor(props) {
+        super(props)
+        this.state = {
+            selectedAsset: ASSET_TYPE.NEO
+        }
+        this.dropdown = DropDownHolder.getDropDown()
+    }
+
     componentWillMount() {
         this.props.navigation.setParams({ handleLogout: this._logout.bind(this) })
     }
@@ -41,6 +53,36 @@ class WalletInfo extends React.Component {
     _logout() {
         this.props.wallet.logout()
         this.props.wallet.resetState()
+    }
+
+    _toggleAsset() {
+        const asset = this.state.selectedAsset === ASSET_TYPE.NEO ? ASSET_TYPE.GAS : ASSET_TYPE.NEO
+        this.setState({ selectedAsset: asset })
+    }
+
+    _sendAsset() {
+        const address = this.txtInputAddress._lastNativeText
+        const amount = this.txtInputAmount._lastNativeText
+        const assetType = this.state.selectedAsset
+
+        if (address.length <= 0 || verifyAddress(address) != true) {
+            this.dropdown.alertWithType('error', 'Error', 'Not a valid destination address')
+        }
+        if (amount < 0) {
+            this.dropdown.alertWithType('error', 'Error', 'Invalid amount')
+        }
+
+        const balance = assetType == ASSET_TYPE.NEO ? this.props.neo : this.props.gas
+        if (amount > balance) {
+            this.dropdown.alertWithType('error', 'Error', 'Not enough' + `${assetType}`)
+        }
+
+        if (assetType == ASSET_TYPE.NEO && parseFloat(amount) !== parseInt(amount)) {
+            this.dropdown.alertWithType('error', 'Error', 'Cannot not send fractional amounts of ' + `${assetType}`)
+        }
+        // we've made it, let's go!
+        // TODO: add confirmation (modal?)
+        this.props.wallet.sendAsset(address, amount, assetType)
     }
 
     render() {
@@ -58,7 +100,6 @@ class WalletInfo extends React.Component {
                             returnKeyType="done"
                             style={styles.inputBox}
                             autoCorrect={false}
-                            secureTextEntry={true}
                         />
                         <View style={styles.addressBook}>
                             <FAIcons name="address-book" size={16} style={styles.network} />
@@ -75,15 +116,14 @@ class WalletInfo extends React.Component {
                             returnKeyType="done"
                             style={styles.inputBox}
                             autoCorrect={false}
-                            secureTextEntry={true}
                         />
                         <Button
-                            title="NEO"
-                            onPress={() => {}}
+                            title={this.state.selectedAsset}
+                            onPress={this._toggleAsset.bind(this)}
                             style={{ height: 30, marginLeft: 0, marginRight: 20, marginTop: 0, flex: 1, backgroundColor: '#236312' }}
                         />
                     </View>
-                    <Button title="Send Asset" onPress={() => {}} />
+                    <Button title="Send Asset" onPress={this._sendAsset.bind(this)} />
                 </View>
                 <View style={styles.addressView}>
                     <Text style={[styles.textAddress, styles.textAddressInfo]}>Your Public Neo Address:</Text>
@@ -93,18 +133,18 @@ class WalletInfo extends React.Component {
                 <View style={styles.content}>
                     <View style={styles.coinCountView}>
                         <Text style={styles.coinCountLabel}>NEO</Text>
-                        <Text style={styles.coinCountValue}>0</Text>
+                        <Text style={styles.coinCountValue}>{this.props.neo}</Text>
                     </View>
                     <View style={styles.refreshButtonView}>
                         <FAIcons name="refresh" size={24} style={styles.refreshButton} />
                     </View>
                     <View style={styles.coinCountView}>
                         <Text style={styles.coinCountLabel}>GAS</Text>
-                        <Text style={styles.coinCountValue}>0</Text>
+                        <Text style={styles.coinCountValue}>{this.props.gas}</Text>
                     </View>
                 </View>
                 <View style={styles.fiatView}>
-                    <Text style={styles.fiatValue}>US $0.00</Text>
+                    <Text style={styles.fiatValue}>US ${this.props.price}</Text>
                 </View>
                 <Spacer />
                 <Button title="Claim 0 GAS" onPress={() => {}} />
@@ -202,7 +242,10 @@ const styles = StyleSheet.create({
 
 function mapStateToProps(state, ownProps) {
     return {
-        address: state.wallet.address
+        address: state.wallet.address,
+        neo: state.wallet.neo,
+        gas: state.wallet.gas,
+        price: state.wallet.price * state.wallet.neo
     }
 }
 

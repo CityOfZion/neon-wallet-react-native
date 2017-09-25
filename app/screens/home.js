@@ -1,6 +1,8 @@
 import React from 'react'
 import { View, Text, Image, StyleSheet } from 'react-native'
 import Tile from '../components/Tile'
+import { getMarketPriceUSD } from '../utils/walletStuff'
+import { getBalance } from 'neon-js'
 
 class Home extends React.Component {
     _goToScreen(screenName) {
@@ -16,11 +18,16 @@ class Home extends React.Component {
                     <Tile title="Login using a saved wallet" onPress={() => this._goToScreen('LoginWallet')} />
                     <Tile title="Encrypt an existing key" dark />
                     <Tile title="Login using an encrypted key" />
-                    <Tile title="Manage neon settings" dark />
                     <Tile
-                        title="Login using a private key"
-                        onPress={() => this.props.navigation.dispatch({ type: 'WALLET/LOGIN_SUCCESS' })}
+                        title="Manage neon settings"
+                        dark
+                        onPress={() => {
+                            getBalance('TestNet', undefined).then(response => {
+                                console.log(response)
+                            })
+                        }}
                     />
+                    <Tile title="Login using a private key" onPress={() => this._goToScreen('LoginWithPrivateKey')} />
                 </View>
             </View>
         )
