@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Picker } from 'react-native'
+import { View, Text, TextInput, StyleSheet } from 'react-native'
 import ModalDropdown from 'react-native-modal-dropdown'
 import Button from '../components/Button'
 

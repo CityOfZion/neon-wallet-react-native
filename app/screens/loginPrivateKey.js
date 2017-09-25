@@ -1,6 +1,5 @@
 import React from 'react'
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Picker } from 'react-native'
-import ModalDropdown from 'react-native-modal-dropdown'
+import { View, TextInput, StyleSheet } from 'react-native'
 import Button from '../components/Button'
 
 // redux
@@ -10,7 +9,7 @@ import { ActionCreators } from '../actions'
 
 class LoginPrivateKey extends React.Component {
     _walletLogin() {
-        let privateKey = this.txtInput1._lastNativeText
+        let privateKey = this.txtPrivateKey._lastNativeText
         this.props.wallet.loginWithPrivateKey(privateKey)
     }
 
@@ -20,7 +19,7 @@ class LoginPrivateKey extends React.Component {
                 <View style={styles.loginForm}>
                     <TextInput
                         ref={txtInput => {
-                            this.txtInput1 = txtInput
+                            this.txtPrivateKey = txtInput
                         }}
                         multiline={false}
                         placeholder="Enter your private key (WIF) here"
@@ -56,9 +55,7 @@ const styles = StyleSheet.create({
 })
 
 function mapStateToProps(state, ownProps) {
-    return {
-        decrypting: state.wallet.decrypting
-    }
+    return {}
 }
 
 const mapDispatchToProps = dispatch => {

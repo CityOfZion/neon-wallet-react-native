@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Picker } from 'react-native'
+import { View, Text, TextInput, StyleSheet } from 'react-native'
 import ModalDropdown from 'react-native-modal-dropdown'
 import Button from '../components/Button'
 
@@ -22,7 +22,7 @@ class LoginWallet extends React.Component {
     }
 
     _walletLogin() {
-        let passphrase = this.txtInput1._lastNativeText
+        let passphrase = this.txtPassphrase._lastNativeText
         let selectedKey = this.state.selectedKey
         this.props.wallet.login(passphrase, selectedKey)
     }
@@ -36,7 +36,7 @@ class LoginWallet extends React.Component {
             <View style={styles.loginForm}>
                 <TextInput
                     ref={txtInput => {
-                        this.txtInput1 = txtInput
+                        this.txtPassphrase = txtInput
                     }}
                     multiline={false}
                     placeholder="Enter passphrase here"
@@ -118,7 +118,6 @@ const styles = StyleSheet.create({
 
         marginBottom: 10
     },
-
     rowText: {
         paddingHorizontal: 6,
         paddingVertical: 10,
@@ -126,7 +125,6 @@ const styles = StyleSheet.create({
         color: 'gray',
         backgroundColor: 'white',
         textAlignVertical: 'center'
-        // flex: 1
     },
     selectWalletRow: {
         flexDirection: 'row',
