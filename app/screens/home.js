@@ -17,7 +17,7 @@ class Home extends React.Component {
                     <Tile title="Create a new wallet" dark onPress={() => this._goToScreen('CreateWallet')} />
                     <Tile title="Login using a saved wallet" onPress={() => this._goToScreen('LoginWallet')} />
                     <Tile title="Encrypt an existing key" dark />
-                    <Tile title="Login using an encrypted key" />
+                    <Tile title="Login using an encrypted key" onPress={() => this._goToScreen('LoginWithEncryptedKey')} />
                     <Tile
                         title="Manage neon settings"
                         dark

@@ -6,6 +6,7 @@ import Home from '../screens/home.js'
 import CreateWallet from '../screens/createWallet.js'
 import LoginWallet from '../screens/loginWallet'
 import LoginPrivateKey from '../screens/loginPrivateKey'
+import LoginEncryptedKey from '../screens/loginEncryptedKey'
 import { WalletTabBar } from '../navigators/WalletTabBarConfiguration'
 //xxx import all remaining screens
 
@@ -55,6 +56,13 @@ const routeConfiguration = {
         navigationOptions: {
             ...defaultOptions,
             headerTitle: 'Login with private key'
+        }
+    },
+    LoginWithEncryptedKey: {
+        screen: LoginEncryptedKey,
+        navigationOptions: {
+            ...defaultOptions,
+            headerTitle: 'Login with an encrypted key'
         }
     }
 }
