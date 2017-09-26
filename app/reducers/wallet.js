@@ -31,7 +31,15 @@ export default function order(state = {}, action) {
                 address: null,
                 passphrase: null,
                 encryptedWif: null,
-                generating: false
+                generating: false,
+                decrypting: false,
+                loggedIn: false,
+                logInError: null,
+                neo: 0,
+                gas: 0,
+                price: 0.0,
+                transactions: [],
+                claimAmount: 0
             }
 
         case actions.wallet.START_DECRYPT_KEYS:
@@ -94,6 +102,12 @@ export default function order(state = {}, action) {
                 transactions: txs
             }
         }
+        case actions.wallet.GET_AVAILABLE_GAS_CLAIM_SUCCESS:
+            const MAGIC_NETWORK_PROTOCOL_FORMAT = 100000000 // read more here: https://github.com/CityOfZion/neon-wallet-db#claiming-gas
+            return {
+                ...state,
+                claimAmount: (action.claimAmounts.available + action.claimAmounts.unavailable) / MAGIC_NETWORK_PROTOCOL_FORMAT
+            }
         default:
             return state
     }

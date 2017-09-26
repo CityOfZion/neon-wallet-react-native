@@ -1,7 +1,15 @@
 import { delay } from 'redux-saga'
-import { put, takeEvery, call, all, takeLatest, select, fork, take } from 'redux-saga/effects'
+import { put, takeEvery, call, all, takeLatest, select, fork, take, cancel, cancelled } from 'redux-saga/effects'
 import { getWallet, getNetwork } from './selectors'
-import { generateEncryptedWif, decrypt_wif, getBalance, getTransactionHistory } from 'neon-js'
+import {
+    generateEncryptedWif,
+    decrypt_wif,
+    getBalance,
+    getTransactionHistory,
+    doSendAsset,
+    getClaimAmounts,
+    getWalletDBHeight
+} from 'neon-js'
 
 import { ActionConstants as actions } from '../actions'
 import { DropDownHolder } from '../utils/DropDownHolder'
@@ -95,6 +103,48 @@ function* retrieveTransactionHistory(network, address) {
     }
 }
 
+function* retrieveClaimAmount(network, address) {
+    try {
+        yield put({ type: actions.wallet.GET_AVAILABLE_GAS_CLAIM })
+        const claimAmounts = yield call(getClaimAmounts, network, address)
+        yield put({ type: actions.wallet.GET_AVAILABLE_GAS_CLAIM_SUCCESS, claimAmounts: claimAmounts })
+        // perhaps disable button/functionality until next block update?
+    } catch (error) {
+        yield put({ type: actions.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR, error: error })
+    }
+}
+
+function* backgroundSyncData() {
+    const BLOCKCHAIN_UPDATE_INTERVAL = 15000
+    try {
+        yield put({ type: 'BACKGROUND_SYNC_STARTING' })
+        while (true) {
+            // Note: keep `select`s inside while or we will miss network (TestNet<->MainNet) change updates
+            const wallet = yield select(getWallet)
+            const network = yield select(getNetwork)
+
+            yield put({ type: actions.network.UPDATE_BLOCK_HEIGHT })
+            const blockHeight = yield call(getWalletDBHeight, network.net)
+
+            if (blockHeight > network.blockHeight[network.net]) {
+                yield put({ type: actions.network.SET_BLOCK_HEIGHT, blockHeight: blockHeight })
+                yield all([
+                    call(retrieveBalance, network.net, wallet.address),
+                    call(retrieveMarketPrice),
+                    call(retrieveTransactionHistory, network.net, wallet.address),
+                    call(retrieveClaimAmount, network.net, wallet.address)
+                ])
+            }
+
+            yield call(delay, BLOCKCHAIN_UPDATE_INTERVAL)
+        }
+    } finally {
+        if (yield cancelled()) {
+            yield put({ type: 'BACKGROUND_SYNC_STOPPED' })
+        }
+    }
+}
+
 function* walletUseFlow(args) {
     const { key, passphrase, keyIsEncrypted } = args
 
@@ -104,18 +154,13 @@ function* walletUseFlow(args) {
     } else {
         yield put({ type: actions.wallet.LOGIN_SUCCESS, plainKey: key })
     }
-    // Note: must get `wallet` state slice after LOGIN_SUCCESS, otherwise `address` is not yet updated
-    const wallet = yield select(getWallet)
-    const network = yield select(getNetwork)
 
-    yield all([
-        call(retrieveBalance, network.net, wallet.address),
-        call(retrieveMarketPrice),
-        call(retrieveTransactionHistory, network.net, wallet.address)
-    ])
-    // TODO: getClaimAmounts (neon-js)
-    // TODO: implement retries on failed balance/marketprice/claim calls
-    // TODO: should we start a background task that monitors the network for neo/gas updates or stick to manual to preserve bandwidth on mobile phone?
+    // start periodic update of data from the blockchain
+    const bgSync = yield fork(backgroundSyncData)
+
+    // cancel when loging out of wallet
+    yield take(actions.wallet.LOGOUT)
+    yield cancel(bgSync)
 }
 
 function* sendAsset(args) {
@@ -131,9 +176,6 @@ function* sendAsset(args) {
             'Success',
             'Transaction complete! Your balance will automatically update when the blockchain has processed it.'
         )
-
-        // update balance and transaction history
-        yield all([call(retrieveBalance, network.net, wallet.address), call(retrieveTransactionHistory, network.net, wallet.address)])
     } catch (error) {
         yield put({ type: actions.wallet.SEND_ASSET_ERROR, error: error })
         DropDownHolder.getDropDown().alertWithType('error', 'Send', 'Transaction sending failed')

@@ -9,6 +9,16 @@ export default function network(state = {}, action) {
                 net: action.network
             }
         }
+        case actions.network.SET_BLOCK_HEIGHT: {
+            const newBlockHeight = {
+                ...state.blockHeight,
+                [state.net]: action.blockHeight
+            }
+            return {
+                ...state,
+                blockHeight: newBlockHeight
+            }
+        }
         default:
             return state
     }

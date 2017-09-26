@@ -34,10 +34,15 @@ let initialState = {
         neo: 0,
         gas: 0,
         price: 0.0,
-        transactions: []
+        transactions: [],
+        claimAmount: 0
     },
     network: {
-        net: 'TestNet'
+        net: 'TestNet',
+        blockHeight: {
+            TestNet: 0,
+            MainNet: 0
+        }
     }
 }
 

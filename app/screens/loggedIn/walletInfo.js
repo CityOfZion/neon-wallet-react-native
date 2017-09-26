@@ -60,32 +60,52 @@ class WalletInfo extends React.Component {
         this.setState({ selectedAsset: asset })
     }
 
-    _sendAsset() {
-        const address = this.txtInputAddress._lastNativeText
-        const amount = this.txtInputAmount._lastNativeText
-        const assetType = this.state.selectedAsset
-
+    _isValidInputForm(address, amount, assetType) {
+        let result = true
         if (address.length <= 0 || verifyAddress(address) != true) {
             this.dropdown.alertWithType('error', 'Error', 'Not a valid destination address')
+            result = false
         }
         if (amount < 0) {
             this.dropdown.alertWithType('error', 'Error', 'Invalid amount')
+            result = false
         }
 
         const balance = assetType == ASSET_TYPE.NEO ? this.props.neo : this.props.gas
         if (amount > balance) {
             this.dropdown.alertWithType('error', 'Error', 'Not enough' + `${assetType}`)
+            result = false
         }
 
         if (assetType == ASSET_TYPE.NEO && parseFloat(amount) !== parseInt(amount)) {
             this.dropdown.alertWithType('error', 'Error', 'Cannot not send fractional amounts of ' + `${assetType}`)
+            result = false
         }
-        // we've made it, let's go!
+        return result
+    }
+
+    _sendAsset() {
+        const address = this.txtInputAddress._lastNativeText
+        const amount = this.txtInputAmount._lastNativeText
+        const assetType = this.state.selectedAsset
+
         // TODO: add confirmation (modal?)
-        this.props.wallet.sendAsset(address, amount, assetType)
+        if (this._isValidInputForm(address, amount, assetType)) {
+            this.props.wallet.sendAsset(address, amount, assetType)
+            // TODO: clear input amount when successful transferred,
+            // TODO: add information instruction that wallet will be updated on next blockchain update.
+        }
+    }
+
+    _claim() {
+        // avoid unnecessary network call
+        if (this.props.claimAmount > 0) {
+            this.props.wallet.claim()
+        }
     }
 
     render() {
+        const claimButtonTitle = 'Claim ' + `${this.props.claimAmount}` + ' GAS'
         return (
             <View style={styles.container}>
                 <View style={styles.dataInputView}>
@@ -147,7 +167,7 @@ class WalletInfo extends React.Component {
                     <Text style={styles.fiatValue}>US ${this.props.price}</Text>
                 </View>
                 <Spacer />
-                <Button title="Claim 0 GAS" onPress={() => {}} />
+                <Button title={claimButtonTitle} onPress={this._claim.bind(this)} />
             </View>
         )
     }
@@ -245,7 +265,8 @@ function mapStateToProps(state, ownProps) {
         address: state.wallet.address,
         neo: state.wallet.neo,
         gas: state.wallet.gas,
-        price: state.wallet.price * state.wallet.neo
+        price: state.wallet.price * state.wallet.neo,
+        claimAmount: state.wallet.claimAmount
     }
 }
 
