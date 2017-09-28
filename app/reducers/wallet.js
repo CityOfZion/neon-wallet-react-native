@@ -39,7 +39,8 @@ export default function order(state = {}, action) {
                 gas: 0,
                 price: 0.0,
                 transactions: [],
-                claimAmount: 0
+                claimAmount: 0,
+                updateSendIndicator: false
             }
 
         case actions.wallet.START_DECRYPT_KEYS:
@@ -107,6 +108,17 @@ export default function order(state = {}, action) {
             return {
                 ...state,
                 claimAmount: (action.claimAmounts.available + action.claimAmounts.unavailable) / MAGIC_NETWORK_PROTOCOL_FORMAT
+            }
+
+        case actions.wallet.SEND_ASSET_SUCCESS:
+            return {
+                ...state,
+                updateSendIndicators: true
+            }
+        case actions.wallet.SEND_ASSET_RESET_SEND_INDICATORS:
+            return {
+                ...state,
+                updateSendIndicators: false
             }
         default:
             return state

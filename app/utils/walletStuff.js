@@ -10,6 +10,23 @@ export function getMarketPriceUSD() {
         .then(response => {
             console.log(response)
             return response.result.Last
-            // return '$' + (lastUSDNEO * amount).toFixed(2).toString()
         })
+        .catch(error => {
+            return -1
+        })
+    // return 10
+}
+
+export function isBlockedByTransportSecurityPolicy(error) {
+    // Test for iOS policy: "The resource could not be loaded because the App Transport Security policy requires the use of a secure connection."
+    let result = { blockedByPolicy: false, blockedDomain: '' }
+    if (
+        error.message != undefined &&
+        error.message === 'Network Error' &&
+        error.request._response.includes('App Transport Security policy')
+    ) {
+        result.blockedByPolicy = true
+        result.blockedDomain = error.request._url
+    }
+    return result
 }

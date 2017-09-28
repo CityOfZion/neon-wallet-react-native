@@ -35,7 +35,8 @@ let initialState = {
         gas: 0,
         price: 0.0,
         transactions: [],
-        claimAmount: 0
+        claimAmount: 0,
+        updateSendIndicators: false
     },
     network: {
         net: 'TestNet',

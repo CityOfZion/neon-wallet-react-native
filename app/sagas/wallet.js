@@ -13,7 +13,7 @@ import {
 
 import { ActionConstants as actions } from '../actions'
 import { DropDownHolder } from '../utils/DropDownHolder'
-import { getMarketPriceUSD } from '../utils/walletStuff'
+import { getMarketPriceUSD, isBlockedByTransportSecurityPolicy } from '../utils/walletStuff'
 
 export function* rootWalletSaga() {
     yield all([watchCreateWallet(), watchLoginWallet(), watchSendAsset(), watchClaimGAS()])
@@ -183,6 +183,7 @@ function* sendAssetFlow(args) {
     const { assetType, toAddress, amount } = args
     const wallet = yield select(getWallet)
     const network = yield select(getNetwork)
+    const FIVE_SECONDS = 5000
 
     try {
         yield call(doSendAsset, network.net, toAddress, wallet.wif, assetType, amount)
@@ -192,9 +193,24 @@ function* sendAssetFlow(args) {
             'Success',
             'Transaction complete! Your balance will automatically update when the blockchain has processed it.'
         )
+        // SEND_ASSET_SUCCESS sets a variable that tells the GUI to update some parts
+        // We want to reset that variable here
+        yield call(delay, FIVE_SECONDS)
+        yield put({ type: actions.wallet.SEND_ASSET_RESET_SEND_INDICATORS })
     } catch (error) {
+        const { blockedByPolicy, blockedDomain } = isBlockedByTransportSecurityPolicy(error)
+        if (blockedByPolicy) {
+            DropDownHolder.getDropDown().alertWithType(
+                'error',
+                'Send',
+                'Transaction sending failed.' +
+                    `${blockedDomain}` +
+                    ' not allowed by iOS App Transport Security policy. Please contact the wallet author.'
+            )
+        } else {
+            DropDownHolder.getDropDown().alertWithType('error', 'Send', 'Transaction sending failed')
+        }
         yield put({ type: actions.wallet.SEND_ASSET_ERROR, error: error })
-        DropDownHolder.getDropDown().alertWithType('error', 'Send', 'Transaction sending failed')
     }
 }
 

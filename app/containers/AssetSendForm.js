@@ -26,24 +26,26 @@ class AssetSendForm extends React.Component {
         this.setState({ selectedAsset: asset })
     }
 
+    componentWillReceiveProps(nextProps) {
+        if (nextProps.updateAfterSend == true) {
+            this.txtInputAmount.clear()
+            this.txtInputAddress.clear()
+        }
+    }
+
     _isValidInputForm(address, amount, assetType) {
         let result = true
-        if (address.length <= 0 || verifyAddress(address) != true || address.charAt(0) !== 'A') {
+        const balance = assetType == ASSET_TYPE.NEO ? this.props.neo : this.props.gas
+        if (address == undefined || address.length <= 0 || verifyAddress(address) != true || address.charAt(0) !== 'A') {
             this.dropdown.alertWithType('error', 'Error', 'Not a valid destination address')
             result = false
-        }
-        if (amount < 0) {
+        } else if (amount == undefined || amount < 0) {
             this.dropdown.alertWithType('error', 'Error', 'Invalid amount')
             result = false
-        }
-
-        const balance = assetType == ASSET_TYPE.NEO ? this.props.neo : this.props.gas
-        if (amount > balance) {
-            this.dropdown.alertWithType('error', 'Error', 'Not enough' + `${assetType}`)
+        } else if (amount > balance) {
+            this.dropdown.alertWithType('error', 'Error', 'Not enough ' + `${assetType}`)
             result = false
-        }
-
-        if (assetType == ASSET_TYPE.NEO && parseFloat(amount) !== parseInt(amount)) {
+        } else if (assetType == ASSET_TYPE.NEO && parseFloat(amount) !== parseInt(amount)) {
             this.dropdown.alertWithType('error', 'Error', 'Cannot not send fractional amounts of ' + `${assetType}`)
             result = false
         }
@@ -140,7 +142,8 @@ const styles = StyleSheet.create({
 function mapStateToProps(state, ownProps) {
     return {
         neo: state.wallet.neo,
-        gas: state.wallet.gas
+        gas: state.wallet.gas,
+        updateAfterSend: state.wallet.updateSendIndicators
     }
 }
 
