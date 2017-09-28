@@ -1,17 +1,15 @@
 import React from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import FAIcons from 'react-native-vector-icons/FontAwesome'
 import Button from '../../components/Button'
 import Spacer from '../../components/Spacer'
-import { ASSET_TYPE } from '../../actions/wallet'
-import { DropDownHolder } from '../../utils/DropDownHolder'
+import NetworkSwitchButton from '../../containers/NetworkSwitchButton'
+import AssetSendForm from '../../containers/AssetSendForm'
 
 // redux
 import { connect } from 'react-redux'
 import { bindActionCreatorsExt } from '../../utils/bindActionCreatorsExt'
 import { ActionCreators } from '../../actions'
-
-import { verifyAddress } from 'neon-js'
 
 class WalletInfo extends React.Component {
     static navigationOptions = ({ navigation }) => ({
@@ -25,76 +23,15 @@ class WalletInfo extends React.Component {
                 <Text style={styles.headerButtonText}>Logout</Text>
             </TouchableOpacity>
         ),
-        headerRight: (
-            <TouchableOpacity
-                onPress={() => {
-                    console.log('Switching network')
-                }}
-                style={styles.headerButton}
-            >
-                <FAIcons name="plug" size={16} style={styles.network} />
-                <Text style={styles.headerButtonText}>Mainnet</Text>
-            </TouchableOpacity>
-        )
+        headerRight: <NetworkSwitchButton />
     })
 
-    constructor(props) {
-        super(props)
-        this.state = {
-            selectedAsset: ASSET_TYPE.NEO
-        }
-        this.dropdown = DropDownHolder.getDropDown()
-    }
-
-    componentWillMount() {
+    componentDidMount() {
         this.props.navigation.setParams({ handleLogout: this._logout.bind(this) })
     }
 
     _logout() {
         this.props.wallet.logout()
-        this.props.wallet.resetState()
-    }
-
-    _toggleAsset() {
-        const asset = this.state.selectedAsset === ASSET_TYPE.NEO ? ASSET_TYPE.GAS : ASSET_TYPE.NEO
-        this.setState({ selectedAsset: asset })
-    }
-
-    _isValidInputForm(address, amount, assetType) {
-        let result = true
-        if (address.length <= 0 || verifyAddress(address) != true) {
-            this.dropdown.alertWithType('error', 'Error', 'Not a valid destination address')
-            result = false
-        }
-        if (amount < 0) {
-            this.dropdown.alertWithType('error', 'Error', 'Invalid amount')
-            result = false
-        }
-
-        const balance = assetType == ASSET_TYPE.NEO ? this.props.neo : this.props.gas
-        if (amount > balance) {
-            this.dropdown.alertWithType('error', 'Error', 'Not enough' + `${assetType}`)
-            result = false
-        }
-
-        if (assetType == ASSET_TYPE.NEO && parseFloat(amount) !== parseInt(amount)) {
-            this.dropdown.alertWithType('error', 'Error', 'Cannot not send fractional amounts of ' + `${assetType}`)
-            result = false
-        }
-        return result
-    }
-
-    _sendAsset() {
-        const address = this.txtInputAddress._lastNativeText
-        const amount = this.txtInputAmount._lastNativeText
-        const assetType = this.state.selectedAsset
-
-        // TODO: add confirmation (modal?)
-        if (this._isValidInputForm(address, amount, assetType)) {
-            this.props.wallet.sendAsset(address, amount, assetType)
-            // TODO: clear input amount when successful transferred,
-            // TODO: add information instruction that wallet will be updated on next blockchain update.
-        }
     }
 
     _claim() {
@@ -108,45 +45,9 @@ class WalletInfo extends React.Component {
         const claimButtonTitle = 'Claim ' + `${this.props.claimAmount}` + ' GAS'
         return (
             <View style={styles.container}>
-                <View style={styles.dataInputView}>
-                    <View style={styles.addressRow}>
-                        <TextInput
-                            ref={txtInput => {
-                                this.txtInputAddress = txtInput
-                            }}
-                            multiline={false}
-                            placeholder="Where to send the asset (address)"
-                            placeholderTextColor="#636363"
-                            returnKeyType="done"
-                            style={styles.inputBox}
-                            autoCorrect={false}
-                        />
-                        <View style={styles.addressBook}>
-                            <FAIcons name="address-book" size={16} style={styles.network} />
-                        </View>
-                    </View>
-                    <View style={styles.addressRow}>
-                        <TextInput
-                            ref={txtInput => {
-                                this.txtInputAmount = txtInput
-                            }}
-                            multiline={false}
-                            placeholder="Amount"
-                            placeholderTextColor="#636363"
-                            returnKeyType="done"
-                            style={styles.inputBox}
-                            autoCorrect={false}
-                        />
-                        <Button
-                            title={this.state.selectedAsset}
-                            onPress={this._toggleAsset.bind(this)}
-                            style={{ height: 30, marginLeft: 0, marginRight: 20, marginTop: 0, flex: 1, backgroundColor: '#236312' }}
-                        />
-                    </View>
-                    <Button title="Send Asset" onPress={this._sendAsset.bind(this)} />
-                </View>
+                <AssetSendForm />
                 <View style={styles.addressView}>
-                    <Text style={[styles.textAddress, styles.textAddressInfo]}>Your Public Neo Address:</Text>
+                    <Text style={styles.textAddress}>Your Public Neo Address:</Text>
                     <Text style={styles.textAddress}>{this.props.address}</Text>
                 </View>
                 <Spacer />
@@ -181,46 +82,11 @@ const styles = StyleSheet.create({
     headerButtonText: {
         color: 'white'
     },
-    network: {
-        color: 'white',
-        marginRight: 2
-    },
     container: {
-        flex: 1
-    },
-    dataInputView: {
-        backgroundColor: '#E8F4E5',
-        flexDirection: 'column',
-        paddingBottom: 10
-    },
-    addressRow: {
-        flexDirection: 'row',
-        alignItems: 'center', // vertical
-        marginVertical: 5
-    },
-    addressBook: {
-        backgroundColor: '#236312',
-        padding: 5,
-        height: 30,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 20
-    },
-    inputBox: {
-        marginHorizontal: 20,
-        marginVertical: 5,
-        paddingHorizontal: 10,
-        height: 30,
-        fontSize: 14,
-        backgroundColor: 'white',
-        color: '#333333',
         flex: 1
     },
     addressView: {
         marginTop: 10
-    },
-    textAddressInfo: {
-        // fontWeight: 'bold'
     },
     textAddress: {
         fontSize: 12,
@@ -265,7 +131,7 @@ function mapStateToProps(state, ownProps) {
         address: state.wallet.address,
         neo: state.wallet.neo,
         gas: state.wallet.gas,
-        price: state.wallet.price * state.wallet.neo,
+        price: state.wallet.price,
         claimAmount: state.wallet.claimAmount
     }
 }

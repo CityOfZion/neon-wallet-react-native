@@ -19,6 +19,12 @@ export default function network(state = {}, action) {
                 blockHeight: newBlockHeight
             }
         }
+        case actions.network.TOGGLE: {
+            return {
+                ...state,
+                net: state.net === NETWORK_MAIN ? NETWORK_TEST : NETWORK_MAIN
+            }
+        }
         default:
             return state
     }

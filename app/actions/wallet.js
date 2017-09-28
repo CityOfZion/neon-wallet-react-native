@@ -24,6 +24,9 @@ const SEND_ASSET_ERROR = 'WALLET/SEND_ASSET_ERROR'
 const GET_AVAILABLE_GAS_CLAIM = 'WALLET/GET_AVAILABLE_GAS_CLAIM'
 const GET_AVAILABLE_GAS_CLAIM_SUCCESS = 'WALLET/GET_AVAILABLE_GAS_CLAIM_SUCCESS'
 const GET_AVAILABLE_GAS_CLAIM_ERROR = 'WALLET/GET_AVAILABLE_GAS_CLAIM_ERROR'
+const CLAIM_GAS = 'WALLET/CLAIM_GAS'
+const CLAIM_GAS_SUCCESS = 'WALLET/CLAIM_GAS_SUCCESS'
+const CLAIM_GAS_ERROR = 'WALLET/CLAIM_GAS_ERROR'
 
 export const constants = {
     CREATE_WALLET,
@@ -51,7 +54,10 @@ export const constants = {
     SEND_ASSET_ERROR,
     GET_AVAILABLE_GAS_CLAIM,
     GET_AVAILABLE_GAS_CLAIM_SUCCESS,
-    GET_AVAILABLE_GAS_CLAIM_ERROR
+    GET_AVAILABLE_GAS_CLAIM_ERROR,
+    CLAIM_GAS,
+    CLAIM_GAS_SUCCESS,
+    CLAIM_GAS_ERROR
 }
 
 export const ASSET_TYPE = {
@@ -110,5 +116,11 @@ export function sendAsset(toAddress, amount, assetType) {
         toAddress,
         amount,
         assetType
+    }
+}
+
+export function claim() {
+    return {
+        type: CLAIM_GAS
     }
 }

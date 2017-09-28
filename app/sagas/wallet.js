@@ -1,5 +1,5 @@
 import { delay } from 'redux-saga'
-import { put, takeEvery, call, all, takeLatest, select, fork, take, cancel, cancelled } from 'redux-saga/effects'
+import { put, takeEvery, call, all, takeLatest, select, fork, take, cancel, cancelled, race } from 'redux-saga/effects'
 import { getWallet, getNetwork } from './selectors'
 import {
     generateEncryptedWif,
@@ -16,7 +16,7 @@ import { DropDownHolder } from '../utils/DropDownHolder'
 import { getMarketPriceUSD } from '../utils/walletStuff'
 
 export function* rootWalletSaga() {
-    yield all([watchCreateWallet(), watchLoginWallet(), watchSendAsset()])
+    yield all([watchCreateWallet(), watchLoginWallet(), watchSendAsset(), watchClaimGAS()])
 }
 
 /*
@@ -25,19 +25,27 @@ export function* rootWalletSaga() {
  *
  */
 function* watchCreateWallet() {
-    yield takeEvery(actions.wallet.CREATE_WALLET, createWallet)
+    yield takeEvery(actions.wallet.CREATE_WALLET, createWalletFlow)
 }
 
 function* watchLoginWallet() {
     while (true) {
         const params = yield take(actions.wallet.LOGIN)
         yield fork(walletUseFlow, params)
-        yield take([actions.wallet.LOGOUT, actions.wallet.LOGIN_ERROR])
+
+        const action = yield take([actions.wallet.LOGOUT, actions.wallet.LOGIN_ERROR])
+        if (action.type == actions.wallet.LOGOUT) {
+            yield put({ type: actions.wallet.RESET_STATE })
+        }
     }
 }
 
 function* watchSendAsset() {
-    yield takeEvery(actions.wallet.SEND_ASSET, sendAsset)
+    yield takeEvery(actions.wallet.SEND_ASSET, sendAssetFlow)
+}
+
+function* watchClaimGAS() {
+    yield takeEvery(actions.wallet.CLAIM_GAS, claimGASFlow)
 }
 
 /*
@@ -45,7 +53,7 @@ function* watchSendAsset() {
  * action takers 
  *
  */
-function* createWallet(args) {
+function* createWalletFlow(args) {
     const { passphrase } = args
     try {
         yield put({ type: actions.wallet.CREATE_WALLET_START })
@@ -114,29 +122,37 @@ function* retrieveClaimAmount(network, address) {
     }
 }
 
+function* retrieveData() {
+    const BLOCKCHAIN_UPDATE_INTERVAL = 15000
+    // Note: keep `select`s inside while or we will miss network (TestNet<->MainNet) store changes
+    const wallet = yield select(getWallet)
+    const network = yield select(getNetwork)
+
+    yield put({ type: actions.network.UPDATE_BLOCK_HEIGHT })
+    const blockHeight = yield call(getWalletDBHeight, network.net)
+
+    if (blockHeight > network.blockHeight[network.net]) {
+        yield put({ type: actions.network.SET_BLOCK_HEIGHT, blockHeight: blockHeight })
+        yield all([
+            call(retrieveBalance, network.net, wallet.address),
+            call(retrieveMarketPrice),
+            call(retrieveTransactionHistory, network.net, wallet.address),
+            call(retrieveClaimAmount, network.net, wallet.address)
+        ])
+    }
+    yield call(delay, BLOCKCHAIN_UPDATE_INTERVAL)
+}
+
 function* backgroundSyncData() {
     const BLOCKCHAIN_UPDATE_INTERVAL = 15000
     try {
         yield put({ type: 'BACKGROUND_SYNC_STARTING' })
         while (true) {
-            // Note: keep `select`s inside while or we will miss network (TestNet<->MainNet) change updates
-            const wallet = yield select(getWallet)
-            const network = yield select(getNetwork)
-
-            yield put({ type: actions.network.UPDATE_BLOCK_HEIGHT })
-            const blockHeight = yield call(getWalletDBHeight, network.net)
-
-            if (blockHeight > network.blockHeight[network.net]) {
-                yield put({ type: actions.network.SET_BLOCK_HEIGHT, blockHeight: blockHeight })
-                yield all([
-                    call(retrieveBalance, network.net, wallet.address),
-                    call(retrieveMarketPrice),
-                    call(retrieveTransactionHistory, network.net, wallet.address),
-                    call(retrieveClaimAmount, network.net, wallet.address)
-                ])
-            }
-
-            yield call(delay, BLOCKCHAIN_UPDATE_INTERVAL)
+            // either wait until the retrieveData task is finished or cancel that and update instantly if we see a network change
+            yield race({
+                updateTask: call(retrieveData),
+                networkSwitch: take([actions.network.SWITCH, actions.network.TOGGLE])
+            })
         }
     } finally {
         if (yield cancelled()) {
@@ -163,7 +179,7 @@ function* walletUseFlow(args) {
     yield cancel(bgSync)
 }
 
-function* sendAsset(args) {
+function* sendAssetFlow(args) {
     const { assetType, toAddress, amount } = args
     const wallet = yield select(getWallet)
     const network = yield select(getNetwork)
@@ -180,4 +196,8 @@ function* sendAsset(args) {
         yield put({ type: actions.wallet.SEND_ASSET_ERROR, error: error })
         DropDownHolder.getDropDown().alertWithType('error', 'Send', 'Transaction sending failed')
     }
+}
+
+function* claimGASFlow() {
+    // TODO: see https://github.com/CityOfZion/neon-wallet/blob/master/app/components/Claim.js
 }
