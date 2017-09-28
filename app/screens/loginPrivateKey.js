@@ -1,16 +1,39 @@
 import React from 'react'
 import { View, TextInput, StyleSheet } from 'react-native'
 import Button from '../components/Button'
+import { DropDownHolder } from '../utils/DropDownHolder'
 
 // redux
 import { bindActionCreatorsExt } from '../utils/bindActionCreatorsExt'
 import { connect } from 'react-redux'
 import { ActionCreators } from '../actions'
 
+import { getPrivateKeyFromWIF } from 'neon-js'
+
 class LoginPrivateKey extends React.Component {
+    _isValidWIF(wif) {
+        const ENCODING_ERROR = -1
+        const WIF_VERIFICATION_FAILED = -2
+        let result = false
+
+        if (wif != undefined && wif.length == 52) {
+            const response = getPrivateKeyFromWIF(wif)
+
+            if (response != ENCODING_ERROR && response != WIF_VERIFICATION_FAILED) {
+                result = true
+            }
+        }
+
+        return result
+    }
+
     _walletLogin() {
         let privateKey = this.txtPrivateKey._lastNativeText
-        this.props.wallet.loginWithPrivateKey(privateKey)
+        if (this._isValidWIF(privateKey)) {
+            this.props.wallet.loginWithPrivateKey(privateKey)
+        } else {
+            DropDownHolder.getDropDown().alertWithType('error', 'Error', 'Invalid key')
+        }
     }
 
     render() {
