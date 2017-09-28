@@ -36,7 +36,8 @@ let initialState = {
         price: 0.0,
         transactions: [],
         claimAmount: 0,
-        updateSendIndicators: false
+        updateSendIndicators: false,
+        pendingBlockConfirm: false
     },
     network: {
         net: 'TestNet',

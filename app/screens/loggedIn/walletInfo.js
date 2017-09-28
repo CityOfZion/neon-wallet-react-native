@@ -54,18 +54,27 @@ class WalletInfo extends React.Component {
                 <View style={styles.content}>
                     <View style={styles.coinCountView}>
                         <Text style={styles.coinCountLabel}>NEO</Text>
-                        <Text style={styles.coinCountValue}>{this.props.neo}</Text>
+                        <Text style={[styles.coinCountValue, this.props.pendingBlockConfirm ? styles.pendingConfirm : null]}>
+                            {this.props.neo}
+                        </Text>
                     </View>
                     <View style={styles.refreshButtonView}>
                         <FAIcons name="refresh" size={24} style={styles.refreshButton} />
                     </View>
                     <View style={styles.coinCountView}>
                         <Text style={styles.coinCountLabel}>GAS</Text>
-                        <Text style={styles.coinCountValue}>{this.props.gas}</Text>
+                        <Text style={[styles.coinCountValue, this.props.pendingBlockConfirm ? styles.pendingConfirm : null]}>
+                            {this.props.gas}
+                        </Text>
                     </View>
                 </View>
                 <View style={styles.fiatView}>
                     <Text style={styles.fiatValue}>US ${this.props.price}</Text>
+                </View>
+                <View style={styles.pendingView}>
+                    <Text style={this.props.pendingBlockConfirm ? styles.pendingConfirm : styles.invisible}>
+                        (Pending block confirmation)
+                    </Text>
                 </View>
                 <Spacer />
                 <Button title={claimButtonTitle} onPress={this._claim.bind(this)} />
@@ -123,6 +132,17 @@ const styles = StyleSheet.create({
     },
     fiatValue: {
         fontWeight: '300'
+    },
+    pendingConfirm: {
+        color: '#939393'
+    },
+    pendingView: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        overflow: 'hidden'
+    },
+    invisible: {
+        color: 'white'
     }
 })
 
@@ -132,7 +152,8 @@ function mapStateToProps(state, ownProps) {
         neo: state.wallet.neo,
         gas: state.wallet.gas,
         price: state.wallet.price,
-        claimAmount: state.wallet.claimAmount
+        claimAmount: state.wallet.claimAmount,
+        pendingBlockConfirm: state.wallet.pendingBlockConfirm
     }
 }
 

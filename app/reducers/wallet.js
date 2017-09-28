@@ -1,6 +1,8 @@
 import { ActionConstants as actions } from '../actions'
 import { getAccountsFromWIFKey } from 'neon-js'
 
+import { ASSET_TYPE } from '../actions/wallet'
+
 export default function order(state = {}, action) {
     switch (action.type) {
         case actions.wallet.CREATE_WALLET_START:
@@ -40,7 +42,8 @@ export default function order(state = {}, action) {
                 price: 0.0,
                 transactions: [],
                 claimAmount: 0,
-                updateSendIndicator: false
+                updateSendIndicator: false,
+                pendingBlockConfirm: false
             }
 
         case actions.wallet.START_DECRYPT_KEYS:
@@ -71,12 +74,29 @@ export default function order(state = {}, action) {
             }
         }
         case actions.wallet.GET_BALANCE_SUCCESS: {
-            return {
-                ...state,
-                neo: action.neo,
-                gas: action.gas
+            let newState
+            // we are not waiting for a transaction confirmation on the blockchain
+            // update balance as normal
+            if (!state.pendingBlockConfirm) {
+                newState = {
+                    ...state,
+                    neo: action.neo,
+                    gas: action.gas
+                }
+            } else {
+                // ignore balance updates until our transaction is confirmed
+                if (state.neo != action.neo && state.gas != action.neo) {
+                    newState = state
+                } else {
+                    newState = {
+                        ...state,
+                        pendingBlockConfirm: false
+                    }
+                }
             }
+            return newState
         }
+
         case actions.wallet.GET_MARKET_PRICE_SUCCESS: {
             return {
                 ...state,
@@ -111,9 +131,13 @@ export default function order(state = {}, action) {
             }
 
         case actions.wallet.SEND_ASSET_SUCCESS:
+            // pre-emptively change asset value, to what has been send by the transaction
+            let assetToChange = action.assetType === ASSET_TYPE.NEO ? 'neo' : 'gas'
             return {
                 ...state,
-                updateSendIndicators: true
+                updateSendIndicators: true,
+                pendingBlockConfirm: true,
+                [assetToChange]: state[assetToChange] - action.amount
             }
         case actions.wallet.SEND_ASSET_RESET_SEND_INDICATORS:
             return {

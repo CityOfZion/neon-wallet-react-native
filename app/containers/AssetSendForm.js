@@ -60,8 +60,6 @@ class AssetSendForm extends React.Component {
         // TODO: add confirmation (modal?)
         if (this._isValidInputForm(address, amount, assetType)) {
             this.props.wallet.sendAsset(address, amount, assetType)
-            // TODO: clear input amount when successful transferred,
-            // TODO: add information instruction that wallet will be updated on next blockchain update.
         }
     }
 

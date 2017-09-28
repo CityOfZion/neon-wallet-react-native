@@ -187,7 +187,7 @@ function* sendAssetFlow(args) {
 
     try {
         yield call(doSendAsset, network.net, toAddress, wallet.wif, assetType, amount)
-        yield put({ type: actions.wallet.SEND_ASSET_SUCCESS })
+        yield put({ type: actions.wallet.SEND_ASSET_SUCCESS, assetType, amount })
         DropDownHolder.getDropDown().alertWithType(
             'success',
             'Success',
@@ -202,7 +202,7 @@ function* sendAssetFlow(args) {
         if (blockedByPolicy) {
             DropDownHolder.getDropDown().alertWithType(
                 'error',
-                'Send',
+                'Error',
                 'Transaction sending failed.' +
                     `${blockedDomain}` +
                     ' not allowed by iOS App Transport Security policy. Please contact the wallet author.'
