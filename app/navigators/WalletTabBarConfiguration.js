@@ -14,6 +14,7 @@ const routeConfiguration = {
         // screen: GiveFeedbackNavigation,
         navigationOptions: {
             tabBarLabel: 'Wallet',
+            headerTitle: 'Wallet overview',
             tabBarIcon: ({ tintColor, focused }) => <ENTIcons name={'wallet'} size={24} style={{ color: tintColor }} />
         }
     },
@@ -21,6 +22,7 @@ const routeConfiguration = {
         screen: TransactionHistory,
         navigationOptions: {
             tabBarLabel: 'Transaction history',
+            headerTitle: 'Transaction history',
             tabBarIcon: ({ tintColor, focused }) => <FAIcons name="history" size={24} style={{ color: tintColor }} />
         }
     }

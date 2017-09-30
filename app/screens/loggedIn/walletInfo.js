@@ -6,6 +6,7 @@ import Spacer from '../../components/Spacer'
 import NetworkSwitchButton from '../../containers/NetworkSwitchButton'
 import AssetSendForm from '../../containers/AssetSendForm'
 import ClaimProgressIndicator from '../../containers/ClaimProgressIndicator'
+import { nDecimalsNoneZero } from '../../utils/walletStuff'
 
 // redux
 import { connect } from 'react-redux'
@@ -57,16 +58,10 @@ class WalletInfo extends React.Component {
         }
     }
 
-    _nDecimalsNoneZero(input, n) {
-        // return n decimals places, only if non-zero
-        const decimalPlaces = Math.pow(10, n)
-        return Math.round(input * decimalPlaces) / decimalPlaces
-    }
-
     render() {
         const claimButtonTitle = 'Claim ' + `${this.props.claimAmount}` + ' GAS'
-        const neoBalance = this._nDecimalsNoneZero(this.props.neo, 3)
-        const gasBalance = this._nDecimalsNoneZero(this.props.gas, 3)
+        const neoBalance = nDecimalsNoneZero(this.props.neo, 3)
+        const gasBalance = nDecimalsNoneZero(this.props.gas, 3)
         return (
             <View style={styles.container}>
                 <AssetSendForm />

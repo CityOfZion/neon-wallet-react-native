@@ -30,3 +30,9 @@ export function isBlockedByTransportSecurityPolicy(error) {
     }
     return result
 }
+
+export function nDecimalsNoneZero(input, n) {
+    // return n decimals places, only if non-zero
+    const decimalPlaces = Math.pow(10, n)
+    return Math.round(input * decimalPlaces) / decimalPlaces
+}

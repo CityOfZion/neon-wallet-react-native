@@ -47,8 +47,7 @@ const routeConfiguration = {
     WalletTabBar: {
         screen: WalletTabBar,
         navigationOptions: {
-            ...defaultOptions,
-            headerTitle: 'Wallet Overview'
+            ...defaultOptions
         }
     },
     LoginWithPrivateKey: {
