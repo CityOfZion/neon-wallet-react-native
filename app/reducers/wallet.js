@@ -105,20 +105,13 @@ export default function order(state = {}, action) {
             }
         }
         case actions.wallet.GET_TRANSACTION_HISTORY_SUCCESS: {
-            let transactions = action.transactions
-            let txs = []
-            for (let i = 0; i < transactions.length; i++) {
-                if (transactions[i].neo_sent === true) {
-                    txs = txs.concat([
-                        { type: 'NEO', amount: transactions[i].NEO, txid: transactions[i].txid, block_index: transactions[i].block_index }
-                    ])
+            let txs = action.transactions.map(tx => {
+                if (tx.neo_sent == true) {
+                    return { type: 'NEO', amount: tx.NEO, txid: tx.txid, block_index: tx.block_index }
+                } else {
+                    return { type: 'GAS', amount: tx.GAS, txid: tx.txid, block_index: tx.block_index }
                 }
-                if (transactions[i].gas_sent === true) {
-                    txs = txs.concat([
-                        { type: 'GAS', amount: transactions[i].GAS, txid: transactions[i].txid, block_index: transactions[i].block_index }
-                    ])
-                }
-            }
+            })
             return {
                 ...state,
                 transactions: txs
