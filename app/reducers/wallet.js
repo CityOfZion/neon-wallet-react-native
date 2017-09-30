@@ -42,6 +42,7 @@ export default function order(state = {}, action) {
                 price: 0.0,
                 transactions: [],
                 claimAmount: 0,
+                claimUnspend: 0,
                 updateSendIndicator: false,
                 pendingBlockConfirm: false
             }
@@ -127,17 +128,27 @@ export default function order(state = {}, action) {
             const MAGIC_NETWORK_PROTOCOL_FORMAT = 100000000 // read more here: https://github.com/CityOfZion/neon-wallet-db#claiming-gas
             return {
                 ...state,
-                claimAmount: (action.claimAmounts.available + action.claimAmounts.unavailable) / MAGIC_NETWORK_PROTOCOL_FORMAT
+                claimAmount: (action.claimAmounts.available + action.claimAmounts.unavailable) / MAGIC_NETWORK_PROTOCOL_FORMAT,
+                claimUnspend: action.claimAmounts.unavailable
             }
 
         case actions.wallet.SEND_ASSET_SUCCESS:
-            // pre-emptively change asset value, to what has been send by the transaction
-            let assetToChange = action.assetType === ASSET_TYPE.NEO ? 'neo' : 'gas'
-            return {
-                ...state,
-                updateSendIndicators: true,
-                pendingBlockConfirm: true,
-                [assetToChange]: state[assetToChange] - action.amount
+            if (action.sentToSelf == true) {
+                /* Because we're sending to ourself, we don't want to freak out the user with showing
+                 * an empty wallet while the blockchain confirms it's sent to ourselve. Therefore
+                 * don't do the pre-emptive balance changing as below
+                 */
+
+                return state
+            } else {
+                // pre-emptively change asset value, to what has been send by the transaction for UX purpose
+                let assetToChange = action.assetType === ASSET_TYPE.NEO ? 'neo' : 'gas'
+                return {
+                    ...state,
+                    updateSendIndicators: true,
+                    pendingBlockConfirm: true,
+                    [assetToChange]: state[assetToChange] - action.amount
+                }
             }
         case actions.wallet.SEND_ASSET_RESET_SEND_INDICATORS:
             return {

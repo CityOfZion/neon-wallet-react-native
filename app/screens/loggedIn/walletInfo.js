@@ -5,6 +5,7 @@ import Button from '../../components/Button'
 import Spacer from '../../components/Spacer'
 import NetworkSwitchButton from '../../containers/NetworkSwitchButton'
 import AssetSendForm from '../../containers/AssetSendForm'
+import ClaimProgressIndicator from '../../containers/ClaimProgressIndicator'
 
 // redux
 import { connect } from 'react-redux'
@@ -26,8 +27,22 @@ class WalletInfo extends React.Component {
         headerRight: <NetworkSwitchButton />
     })
 
+    constructor(props) {
+        super(props)
+        this.state = {
+            claimStarted: false
+        }
+    }
+
     componentDidMount() {
         this.props.navigation.setParams({ handleLogout: this._logout.bind(this) })
+    }
+
+    componentWillReceiveProps(nextProps) {
+        if (nextProps.gasClaimConfirmed == true) {
+            // flow is done, we can reset now
+            this.setState({ claimStarted: false })
+        }
     }
 
     _logout() {
@@ -38,11 +53,20 @@ class WalletInfo extends React.Component {
         // avoid unnecessary network call
         if (this.props.claimAmount > 0) {
             this.props.wallet.claim()
+            this.setState({ claimStarted: true })
         }
+    }
+
+    _nDecimalsNoneZero(input, n) {
+        // return n decimals places, only if non-zero
+        const decimalPlaces = Math.pow(10, n)
+        return Math.round(input * decimalPlaces) / decimalPlaces
     }
 
     render() {
         const claimButtonTitle = 'Claim ' + `${this.props.claimAmount}` + ' GAS'
+        const neoBalance = this._nDecimalsNoneZero(this.props.neo, 3)
+        const gasBalance = this._nDecimalsNoneZero(this.props.gas, 3)
         return (
             <View style={styles.container}>
                 <AssetSendForm />
@@ -55,7 +79,7 @@ class WalletInfo extends React.Component {
                     <View style={styles.coinCountView}>
                         <Text style={styles.coinCountLabel}>NEO</Text>
                         <Text style={[styles.coinCountValue, this.props.pendingBlockConfirm ? styles.pendingConfirm : null]}>
-                            {this.props.neo}
+                            {neoBalance}
                         </Text>
                     </View>
                     <View style={styles.refreshButtonView}>
@@ -64,12 +88,12 @@ class WalletInfo extends React.Component {
                     <View style={styles.coinCountView}>
                         <Text style={styles.coinCountLabel}>GAS</Text>
                         <Text style={[styles.coinCountValue, this.props.pendingBlockConfirm ? styles.pendingConfirm : null]}>
-                            {this.props.gas}
+                            {gasBalance}
                         </Text>
                     </View>
                 </View>
                 <View style={styles.fiatView}>
-                    <Text style={styles.fiatValue}>US ${this.props.price}</Text>
+                    <Text style={styles.fiatValue}>US ${this.props.price.toFixed(2)}</Text>
                 </View>
                 <View style={styles.pendingView}>
                     <Text style={this.props.pendingBlockConfirm ? styles.pendingConfirm : styles.invisible}>
@@ -77,7 +101,13 @@ class WalletInfo extends React.Component {
                     </Text>
                 </View>
                 <Spacer />
-                <Button title={claimButtonTitle} onPress={this._claim.bind(this)} />
+                {this.state.claimStarted && !this.props.gasClaimConfirmed ? (
+                    <View style={styles.claimProgress}>
+                        <ClaimProgressIndicator />
+                    </View>
+                ) : (
+                    <Button title={claimButtonTitle} onPress={this._claim.bind(this)} />
+                )}
             </View>
         )
     }
@@ -143,6 +173,10 @@ const styles = StyleSheet.create({
     },
     invisible: {
         color: 'white'
+    },
+    claimProgress: {
+        marginLeft: 30,
+        opacity: 0.5
     }
 })
 
@@ -153,7 +187,8 @@ function mapStateToProps(state, ownProps) {
         gas: state.wallet.gas,
         price: state.wallet.price,
         claimAmount: state.wallet.claimAmount,
-        pendingBlockConfirm: state.wallet.pendingBlockConfirm
+        pendingBlockConfirm: state.wallet.pendingBlockConfirm,
+        gasClaimConfirmed: state.claim.gasClaimConfirmed
     }
 }
 

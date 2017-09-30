@@ -36,6 +36,7 @@ let initialState = {
         price: 0.0,
         transactions: [],
         claimAmount: 0,
+        claimUnspend: 0,
         updateSendIndicators: false,
         pendingBlockConfirm: false
     },
@@ -45,6 +46,12 @@ let initialState = {
             TestNet: 0,
             MainNet: 0
         }
+    },
+    claim: {
+        unspendToClear: false,
+        sentToSelfSuccess: false,
+        transactionCleared: false,
+        gasClaimed: false
     }
 }
 

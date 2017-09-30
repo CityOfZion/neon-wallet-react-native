@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, TextInput, StyleSheet } from 'react-native'
+import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native'
 import { verifyAddress } from 'neon-js'
 import FAIcons from 'react-native-vector-icons/FontAwesome'
 
@@ -79,7 +79,9 @@ class AssetSendForm extends React.Component {
                         autoCorrect={false}
                     />
                     <View style={styles.addressBook}>
-                        <FAIcons name="address-book" size={16} style={styles.network} />
+                        <TouchableOpacity onPress={() => alert('Not yet implemented')}>
+                            <FAIcons name="address-book" size={16} style={styles.network} />
+                        </TouchableOpacity>
                     </View>
                 </View>
                 <View style={styles.addressRow}>
