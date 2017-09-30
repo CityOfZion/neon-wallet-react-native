@@ -1,3 +1,6 @@
+import { getPrivateKeyFromWIF, generatePrivateKey, getWIFFromPrivateKey, encryptWIF, getAccountsFromWIFKey } from 'neon-js'
+import { DropDownHolder } from '../utils/DropDownHolder'
+
 export function getMarketPriceUSD() {
     return fetch('https://bittrex.com/api/v1.1/public/getticker?market=USDT-NEO')
         .then(response => {
@@ -35,4 +38,55 @@ export function nDecimalsNoneZero(input, n) {
     // return n decimals places, only if non-zero
     const decimalPlaces = Math.pow(10, n)
     return Math.round(input * decimalPlaces) / decimalPlaces
+}
+
+export function isValidWIF(wif) {
+    const ENCODING_ERROR = -1
+    const WIF_VERIFICATION_FAILED = -2
+    let result = false
+
+    if (wif != undefined && wif.length == 52) {
+        const response = getPrivateKeyFromWIF(wif)
+
+        if (response != ENCODING_ERROR && response != WIF_VERIFICATION_FAILED) {
+            result = true
+        }
+    }
+
+    if (result == false) {
+        DropDownHolder.getDropDown().alertWithType('error', 'Error', 'Invalid key')
+    }
+
+    return result
+}
+
+export function isValidPassphrase(pw1, pw2) {
+    var result = false
+    if (pw1 && pw2) {
+        if (pw1.length < 5) {
+            DropDownHolder.getDropDown().alertWithType('error', 'Error', 'Passphrase too short. Minimal 5 characters.')
+        } else if (pw1 !== pw2) {
+            DropDownHolder.getDropDown().alertWithType('error', 'Error', 'Passphrases do not match')
+        } else {
+            result = true
+        }
+    } else {
+        DropDownHolder.getDropDown().alertWithType('error', 'Error', 'Passphrases cannot be empty')
+    }
+    return result
+}
+
+export function generateEncryptedWif(passphrase, existingWIF) {
+    let wif
+    if (existingWIF != undefined) {
+        wif = existingWIF
+    } else {
+        wif = getWIFFromPrivateKey(generatePrivateKey())
+    }
+    return encryptWIF(wif, passphrase).then(encryptedWif => ({
+        wif,
+        encryptedWif,
+        passphrase,
+        address: getAccountsFromWIFKey(wif)[0].address
+    }))
 }

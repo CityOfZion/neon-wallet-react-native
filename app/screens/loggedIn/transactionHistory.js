@@ -9,7 +9,6 @@ class TransactionHistory extends React.Component {
     })
 
     _renderRow(item) {
-        // type: 'NEO', amount: tx.NEO, txid: tx.txid, block_index: tx.block_index }
         const tx = item.item
         return (
             <View style={styles.txRow}>

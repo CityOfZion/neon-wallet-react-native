@@ -1,20 +1,11 @@
 import { delay } from 'redux-saga'
 import { put, takeEvery, call, all, takeLatest, select, fork, take, cancel, cancelled, race } from 'redux-saga/effects'
 import { getWallet, getNetwork, getWalletGasBalance } from './selectors'
-import {
-    generateEncryptedWif,
-    decrypt_wif,
-    getBalance,
-    getTransactionHistory,
-    doSendAsset,
-    getClaimAmounts,
-    getWalletDBHeight,
-    doClaimAllGas
-} from 'neon-js'
+import { decrypt_wif, getBalance, getTransactionHistory, doSendAsset, getClaimAmounts, getWalletDBHeight, doClaimAllGas } from 'neon-js'
 
 import { ActionConstants as actions } from '../actions'
 import { DropDownHolder } from '../utils/DropDownHolder'
-import { getMarketPriceUSD, isBlockedByTransportSecurityPolicy } from '../utils/walletStuff'
+import { getMarketPriceUSD, isBlockedByTransportSecurityPolicy, generateEncryptedWif } from '../utils/walletStuff'
 
 export function* rootWalletSaga() {
     yield all([watchCreateWallet(), watchLoginWallet(), watchSendAsset(), watchClaimGAS()])
@@ -55,11 +46,11 @@ function* watchClaimGAS() {
  *
  */
 export function* createWalletFlow(args) {
-    const { passphrase } = args
+    const { passphrase, wif } = args
     try {
         yield put({ type: actions.wallet.CREATE_WALLET_START })
         yield call(delay, 1000) // to give the UI-thread time to show the 'generating view'
-        const result = yield call(generateEncryptedWif, passphrase) // too computational heavy. Blocks Animations.
+        const result = yield call(generateEncryptedWif, passphrase, wif) // too computational heavy. Blocks Animations.
         // Breaking it up in the individual parts with delays didn't help
         // possibly using requestAnimationframe(()=>{call funcs here}) could work. try later
 

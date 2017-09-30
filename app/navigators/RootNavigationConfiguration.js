@@ -5,8 +5,8 @@ import { StackNavigator } from 'react-navigation'
 import Home from '../screens/home.js'
 import CreateWallet from '../screens/createWallet.js'
 import LoginWallet from '../screens/loginWallet'
-import LoginPrivateKey from '../screens/loginPrivateKey'
 import LoginEncryptedKey from '../screens/loginEncryptedKey'
+import LoginPrivateKey from '../screens/loginPrivateKey'
 import { WalletTabBar } from '../navigators/WalletTabBarConfiguration'
 //xxx import all remaining screens
 
@@ -44,12 +44,14 @@ const routeConfiguration = {
             headerTitle: 'Login to existing Wallet'
         }
     },
-    WalletTabBar: {
-        screen: WalletTabBar,
+    LoginWithEncryptedKey: {
+        screen: LoginEncryptedKey,
         navigationOptions: {
-            ...defaultOptions
+            ...defaultOptions,
+            headerTitle: 'Login with an encrypted key'
         }
     },
+    // insert manage neo settngs here
     LoginWithPrivateKey: {
         screen: LoginPrivateKey,
         navigationOptions: {
@@ -57,11 +59,10 @@ const routeConfiguration = {
             headerTitle: 'Login with private key'
         }
     },
-    LoginWithEncryptedKey: {
-        screen: LoginEncryptedKey,
+    WalletTabBar: {
+        screen: WalletTabBar,
         navigationOptions: {
-            ...defaultOptions,
-            headerTitle: 'Login with an encrypted key'
+            ...defaultOptions
         }
     }
 }

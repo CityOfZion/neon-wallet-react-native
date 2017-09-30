@@ -1,12 +1,10 @@
 import React from 'react'
-import { View, Text, StyleSheet, TextInput } from 'react-native'
-import { DropDownHolder } from '../utils/DropDownHolder'
+import { View, Text, TextInput, StyleSheet } from 'react-native'
 import Button from '../components/Button'
-import KeyDataRow from '../components/KeyDataRow'
 import GeneratedKeysView from '../components/GeneratedKeysView'
+import { isValidWIF, isValidPassphrase } from '../utils/walletStuff'
+import { DropDownHolder } from '../utils/DropDownHolder'
 import { resetState } from '../actions/wallet'
-
-import { BarIndicator } from 'react-native-indicators'
 
 // redux
 import { bindActionCreatorsExt } from '../utils/bindActionCreatorsExt'
@@ -24,62 +22,81 @@ class CreateWallet extends React.Component {
 
     constructor(props) {
         super(props)
-        this.dropdown = DropDownHolder.getDropDown()
+        this.state = {
+            useExistingKey: false
+        }
+    }
+
+    componentDidMount() {
+        this.setState({ useExistingKey: this.props.navigation.state.params.useExistingKey })
     }
 
     _generateKeys() {
-        if (this._isValidInput()) {
-            const current_phrase = this.txtInput1._lastNativeText
-            this.props.wallet.create(current_phrase)
+        const pw1 = this.txtPassphrase._lastNativeText
+        const pw2 = this.txtPassphraseRepeat._lastNativeText
+        const wif = this.txtPrivateKey && this.txtPrivateKey._lastNativeText
+
+        if (isValidPassphrase(pw1, pw2)) {
+            if (this.state.useExistingKey) {
+                if (isValidWIF(wif)) {
+                    this.props.wallet.create(pw1, wif)
+                }
+            } else {
+                this.props.wallet.create(pw1)
+            }
         }
     }
 
-    _isValidInput() {
-        // test if input contains content
-        var result = false
-        if (this.txtInput1._lastNativeText && this.txtInput2._lastNativeText) {
-            if (this.txtInput1._lastNativeText.length < 5) {
-                this.dropdown.alertWithType('error', 'Error', 'Passphrase too short. Minimal 5 characters.')
-            } else if (this.txtInput1._lastNativeText != this.txtInput2._lastNativeText) {
-                this.dropdown.alertWithType('error', 'Error', 'Passphrases do not match')
-            } else {
-                result = true
-            }
-        } else {
-            this.dropdown.alertWithType('error', 'Error', 'Passphrases cannot be empty')
-        }
-        return result
+    _renderWIFEntry() {
+        return (
+            <TextInput
+                ref={txtInput => {
+                    this.txtPrivateKey = txtInput
+                }}
+                multiline={false}
+                placeholder="Enter your private key (WIF) here"
+                placeholderTextColor="#636363"
+                returnKeyType="done"
+                style={styles.inputBox}
+                autoCorrect={false}
+                secureTextEntry={true}
+            />
+        )
     }
 
     _renderPassphraseEntry() {
         return (
-            <View style={{ marginTop: 20 }}>
-                <Text style={styles.instructionText}>Choose a passphrase to encrypt your private key</Text>
-                <TextInput
-                    ref={txtInput => {
-                        this.txtInput1 = txtInput
-                    }}
-                    multiline={false}
-                    placeholder="Enter passphrase here"
-                    placeholderTextColor="#636363"
-                    returnKeyType="done"
-                    style={styles.inputBox}
-                    autoCorrect={false}
-                    secureTextEntry={true}
-                />
-                <TextInput
-                    ref={txtInput => {
-                        this.txtInput2 = txtInput
-                    }}
-                    multiline={false}
-                    placeholder="Repeat passphrase here"
-                    placeholderTextColor="#636363"
-                    returnKeyType="done"
-                    style={styles.inputBox}
-                    autoCorrect={false}
-                    secureTextEntry={true}
-                />
-                <Button onPress={this._generateKeys.bind(this)} title="Generate keys" />
+            <View style={styles.container}>
+                <View style={styles.generateForm}>
+                    <Text style={styles.instructionText}>Choose a passphrase to encrypt your private key</Text>
+                    <TextInput
+                        ref={txtInput => {
+                            this.txtPassphrase = txtInput
+                        }}
+                        multiline={false}
+                        placeholder="Enter passphrase here"
+                        placeholderTextColor="#636363"
+                        returnKeyType="done"
+                        style={styles.inputBox}
+                        autoCorrect={false}
+                        secureTextEntry={true}
+                    />
+                    <TextInput
+                        ref={txtInput => {
+                            this.txtPassphraseRepeat = txtInput
+                        }}
+                        multiline={false}
+                        placeholder="Repeat passphrase here"
+                        placeholderTextColor="#636363"
+                        returnKeyType="done"
+                        style={styles.inputBox}
+                        autoCorrect={false}
+                        secureTextEntry={true}
+                    />
+                    {this.state.useExistingKey ? this._renderWIFEntry() : null}
+                    <Button onPress={this._generateKeys.bind(this)} title="Generate encrypted key" />
+                    <Text>huh{this.state.useExistingKey}</Text>
+                </View>
             </View>
         )
     }
@@ -103,7 +120,7 @@ class CreateWallet extends React.Component {
     render() {
         const { generating, wif, passphrase, address, encryptedWif } = this.props
         return (
-            <View style={styles.main}>
+            <View style={styles.container}>
                 {wif == null ? this._renderPassphraseEntry() : null}
                 {generating ? this._renderBarIndicator() : null}
                 {!generating && wif != null ? (
@@ -121,7 +138,7 @@ class CreateWallet extends React.Component {
 }
 
 const styles = StyleSheet.create({
-    main: {
+    container: {
         flex: 1,
         flexDirection: 'column',
         justifyContent: 'flex-start'
@@ -141,6 +158,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#E8F4E5',
         color: '#333333'
     },
+    generateForm: {
+        marginTop: 5
+    },
     indicatorView: {
         top: 0,
         bottom: 0,
@@ -157,7 +177,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold'
     }
 })
-
 function mapStateToProps(state, ownProps) {
     return {
         wif: state.wallet.wif,

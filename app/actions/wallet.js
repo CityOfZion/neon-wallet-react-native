@@ -77,10 +77,12 @@ export const ASSET_TYPE = {
     GAS: 'Gas'
 }
 
-export function create(passphrase) {
+// wif is optional
+export function create(passphrase, wif) {
     return {
         type: CREATE_WALLET,
-        passphrase
+        passphrase,
+        wif
     }
 }
 

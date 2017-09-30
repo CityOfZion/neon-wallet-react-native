@@ -5,8 +5,8 @@ import { getMarketPriceUSD } from '../utils/walletStuff'
 import { getBalance } from 'neon-js'
 
 class Home extends React.Component {
-    _goToScreen(screenName) {
-        this.props.navigation.navigate(screenName)
+    _goToScreen(screenName, payload) {
+        this.props.navigation.navigate(screenName, payload)
     }
 
     render() {
@@ -14,9 +14,9 @@ class Home extends React.Component {
             <View style={styles.main}>
                 <Image style={styles.logo} source={require('../images/neon-logo2.png')} resizeMode="contain" />
                 <View style={styles.tiles}>
-                    <Tile title="Create a new wallet" dark onPress={() => this._goToScreen('CreateWallet')} />
+                    <Tile title="Create a new wallet" dark onPress={() => this._goToScreen('CreateWallet', { useExistingKey: false })} />
                     <Tile title="Login using a saved wallet" onPress={() => this._goToScreen('LoginWallet')} />
-                    <Tile title="Encrypt an existing key" dark />
+                    <Tile title="Encrypt an existing key" dark onPress={() => this._goToScreen('CreateWallet', { useExistingKey: true })} />
                     <Tile title="Login using an encrypted key" onPress={() => this._goToScreen('LoginWithEncryptedKey')} />
                     <Tile
                         title="Manage neon settings"
