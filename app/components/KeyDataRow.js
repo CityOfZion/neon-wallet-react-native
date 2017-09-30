@@ -1,5 +1,6 @@
 import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
+import PropTypes from 'prop-types'
 
 class KeyDataRow extends React.Component {
     render() {
@@ -10,6 +11,11 @@ class KeyDataRow extends React.Component {
             </View>
         )
     }
+}
+
+KeyDataRow.propTypes = {
+    title: PropTypes.string,
+    value: PropTypes.string
 }
 
 const styles = StyleSheet.create({

@@ -3,6 +3,7 @@ import { ScrollView, View, Text, StyleSheet, TextInput, Clipboard } from 'react-
 import KeyDataRow from './KeyDataRow'
 import Button from './Button'
 import { DropDownHolder } from '../utils/DropDownHolder'
+import PropTypes from 'prop-types'
 
 class GeneratedKeysView extends React.Component {
     constructor(props) {
@@ -97,6 +98,14 @@ class GeneratedKeysView extends React.Component {
             </ScrollView>
         )
     }
+}
+
+GeneratedKeysView.propTypes = {
+    saveKeyCallback: PropTypes.func,
+    wif: PropTypes.string,
+    passphrase: PropTypes.string,
+    encryptedWif: PropTypes.string,
+    address: PropTypes.string
 }
 
 const styles = StyleSheet.create({

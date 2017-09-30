@@ -1,19 +1,25 @@
 import React from 'react'
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native'
+import PropTypes from 'prop-types'
 
 const TILE_MARGIN = 20 // left&right+middle
 
 class Tile extends React.Component {
     render() {
-        const { title, dark } = this.props
+        const { title, onPress, dark } = this.props
         return (
-            <TouchableOpacity onPress={this.props.onPress}>
+            <TouchableOpacity onPress={onPress}>
                 <View style={[styles.box, { backgroundColor: dark ? '#236312' : '#4D933B' }]}>
                     <Text style={styles.title}>{title}</Text>
                 </View>
             </TouchableOpacity>
         )
     }
+}
+
+Tile.propTypes = {
+    onPress: PropTypes.func,
+    title: PropTypes.string
 }
 
 const styles = StyleSheet.create({

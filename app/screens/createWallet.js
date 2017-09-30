@@ -95,7 +95,6 @@ class CreateWallet extends React.Component {
                     />
                     {this.state.useExistingKey ? this._renderWIFEntry() : null}
                     <Button onPress={this._generateKeys.bind(this)} title="Generate encrypted key" />
-                    <Text>huh{this.state.useExistingKey}</Text>
                 </View>
             </View>
         )

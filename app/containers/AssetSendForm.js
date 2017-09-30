@@ -12,6 +12,8 @@ import { connect } from 'react-redux'
 import { bindActionCreatorsExt } from '../utils/bindActionCreatorsExt'
 import { ActionCreators } from '../actions'
 
+import PropTypes from 'prop-types'
+
 class AssetSendForm extends React.Component {
     constructor(props) {
         super(props)
@@ -96,11 +98,7 @@ class AssetSendForm extends React.Component {
                         style={styles.inputBox}
                         autoCorrect={false}
                     />
-                    <Button
-                        title={this.state.selectedAsset}
-                        onPress={this._toggleAsset.bind(this)}
-                        style={{ height: 30, marginLeft: 0, marginRight: 20, marginTop: 0, flex: 1, backgroundColor: '#236312' }}
-                    />
+                    <Button title={this.state.selectedAsset} onPress={this._toggleAsset.bind(this)} style={styles.assetToggleButton} />
                 </View>
                 <Button title="Send Asset" onPress={this._sendAsset.bind(this)} />
             </View>
@@ -136,6 +134,14 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         color: '#333333',
         flex: 1
+    },
+    assetToggleButton: {
+        height: 30,
+        marginLeft: 0,
+        marginRight: 20,
+        marginTop: 0,
+        flex: 1,
+        backgroundColor: '#236312'
     }
 })
 

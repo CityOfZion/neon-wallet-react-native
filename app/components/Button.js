@@ -1,5 +1,6 @@
 import React from 'react'
 import { TouchableOpacity, Text, StyleSheet } from 'react-native'
+import PropTypes from 'prop-types'
 
 class Button extends React.Component {
     static defaultProps = {
@@ -13,6 +14,11 @@ class Button extends React.Component {
             </TouchableOpacity>
         )
     }
+}
+
+Button.propTypes = {
+    onPress: PropTypes.func,
+    title: PropTypes.string
 }
 
 const styles = StyleSheet.create({
