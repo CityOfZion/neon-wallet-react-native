@@ -18,15 +18,7 @@ class Home extends React.Component {
                     <Tile title="Login using a saved wallet" onPress={() => this._goToScreen('LoginWallet')} />
                     <Tile title="Encrypt an existing key" dark onPress={() => this._goToScreen('CreateWallet', { useExistingKey: true })} />
                     <Tile title="Login using an encrypted key" onPress={() => this._goToScreen('LoginWithEncryptedKey')} />
-                    <Tile
-                        title="Manage neon settings"
-                        dark
-                        onPress={() => {
-                            getBalance('TestNet', undefined).then(response => {
-                                console.log(response)
-                            })
-                        }}
-                    />
+                    <Tile title="Manage neon settings" dark onPress={() => alert('Not yet implemented')} />
                     <Tile title="Login using a private key" onPress={() => this._goToScreen('LoginWithPrivateKey')} />
                 </View>
             </View>

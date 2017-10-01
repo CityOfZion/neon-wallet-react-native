@@ -28,8 +28,7 @@
     "babel-preset-env": "^1.6.0",
     "babel-preset-react-native": "4.0.0",
     "jest": "^21.1.0",
-    "react-test-renderer": "16.0.0-alpha.12",
-    "redux-saga-testing": "^1.0.5"
+    "react-test-renderer": "16.0.0-alpha.12"
   },
   "jest": {
     "preset": "react-native"

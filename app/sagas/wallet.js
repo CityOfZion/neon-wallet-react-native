@@ -116,7 +116,6 @@ function* retrieveClaimAmount(network, address) {
 
 function* retrieveData() {
     const BLOCKCHAIN_UPDATE_INTERVAL = 10000 //15000
-    // Note: keep `select`s inside while or we will miss network (TestNet<->MainNet) store changes
     const wallet = yield select(getWallet)
     const network = yield select(getNetwork)
 
@@ -166,7 +165,7 @@ function* walletUseFlow(args) {
     const bgSync = yield fork(backgroundSyncData)
 
     // cancel when loging out of wallet
-    yield take([actions.wallet.LOGOUT, 'TMP_STOP_BG_SERVICE'])
+    yield take(actions.wallet.LOGOUT)
     yield cancel(bgSync)
 }
 
@@ -270,7 +269,7 @@ function* claimGASFlow() {
         if (newGASBalance > oldGASBalance) {
             // This sitation might occur for 2 reasons:
             // 1) GAS balance has updated as the result of our claim being confirmed by the blockchain
-            // 2) Somebody happened to have sent us GAS in the time window between the CLAIM_GAS_SUCCESS and the next 2 GET_BALANCE_SUCCESS events
+            // 2) Somebody happened to have sent us GAS in the time window between the CLAIM_GAS_SUCCESS and the next ~2 GET_BALANCE_SUCCESS events
             // Option 2 is so unlikely to happen that I consider this an acceptable solution
             yield put({ type: actions.wallet.CLAIM_GAS_CONFIRMED_BY_BLOCKCHAIN })
             return

@@ -48,11 +48,3 @@ export default function claim(state = {}, action) {
             return state
     }
 }
-
-/*
-* Unspent claim found, trying to clear…  (UNSPEND_CLAIM_TO_CLEAR)
-** Sending Neo to Yourself…success   (SEND_ASSET_SUCCESS, sentToSelf: true)
-** Waiting for transaction to clear…success (TRANSACTION_TO_SELF_CLEARED)
-* Attempting to claim all available gas…success (CLAIM_GAS_SUCCESS)
-* Waiting for GAS balance to update…done
-*/
