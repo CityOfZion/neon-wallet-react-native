@@ -5,6 +5,8 @@ A NEO light-wallet for Android and iOS build using react-native. It's aim is to 
 Use at your own risk! It's still in development stages. While I tried to make it completely error free (as I use it myself) no guarantees can be given. Tests need to be writted to increase assurance. 100% is never achievable.
 </aside>
 
+![wallet](/screenshot.png)
+
 ### Installation
 `npm install`
 
