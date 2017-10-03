@@ -12,8 +12,6 @@ Use at your own risk! It's still in development stages. While I tried to make it
 
 Then apply the following react-navigation patch: [Add headerLeftOnPress](https://github.com/react-community/react-navigation/pull/1291)
 
-Finally, replace `./node_modules/neon-js/lib/index.js` with the version found here: (https://github.com/CityOfZion/neon-js/issues/18)
-
 Note: this should later be automated by using something like [patch-package](https://github.com/ds300/patch-package/)
 
 ### Run
