@@ -1,8 +1,6 @@
 import React from 'react'
 import { View, Text, Image, StyleSheet } from 'react-native'
 import Tile from '../components/Tile'
-import { getMarketPriceUSD } from '../utils/walletStuff'
-import { getBalance } from 'neon-js'
 
 class Home extends React.Component {
     _goToScreen(screenName, payload) {
