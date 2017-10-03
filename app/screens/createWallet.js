@@ -2,9 +2,10 @@ import React from 'react'
 import { View, Text, TextInput, StyleSheet } from 'react-native'
 import Button from '../components/Button'
 import GeneratedKeysView from '../components/GeneratedKeysView'
-import { isValidWIF, isValidPassphrase } from '../utils/walletStuff'
+import { isValidPassphrase } from '../utils/walletStuff'
 import { DropDownHolder } from '../utils/DropDownHolder'
 import { resetState } from '../actions/wallet'
+import { isValidWIF } from '../api/crypto'
 
 // redux
 import { bindActionCreatorsExt } from '../utils/bindActionCreatorsExt'
@@ -113,11 +114,11 @@ class CreateWallet extends React.Component {
     }
 
     _saveKey(key_name) {
-        this.props.wallet.saveKey(this.props.encryptedWif, key_name)
+        this.props.wallet.saveKey(this.props.encryptedWIF, key_name)
     }
 
     render() {
-        const { generating, wif, passphrase, address, encryptedWif } = this.props
+        const { generating, wif, passphrase, address, encryptedWIF } = this.props
         return (
             <View style={styles.container}>
                 {wif == null ? this._renderPassphraseEntry() : null}
@@ -127,7 +128,7 @@ class CreateWallet extends React.Component {
                         wif={wif}
                         passphrase={passphrase}
                         address={address}
-                        encryptedWif={encryptedWif}
+                        encryptedWIF={encryptedWIF}
                         saveKeyCallback={this._saveKey.bind(this)}
                     />
                 ) : null}
@@ -181,7 +182,7 @@ function mapStateToProps(state, ownProps) {
         wif: state.wallet.wif,
         address: state.wallet.address,
         passphrase: state.wallet.passphrase,
-        encryptedWif: state.wallet.encryptedWif,
+        encryptedWIF: state.wallet.encryptedWIF,
         generating: state.wallet.generating
     }
 }

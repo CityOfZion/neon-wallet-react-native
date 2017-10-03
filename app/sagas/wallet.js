@@ -1,7 +1,8 @@
 import { delay } from 'redux-saga'
 import { put, takeEvery, call, all, takeLatest, select, fork, take, cancel, cancelled, race } from 'redux-saga/effects'
 import { getWallet, getNetwork, getWalletGasBalance } from './selectors'
-import { decrypt_wif, getBalance, getTransactionHistory, doSendAsset, getClaimAmounts, getWalletDBHeight, doClaimAllGas } from 'neon-js'
+import { getBalance, getTransactionHistory, doSendAsset, getClaimAmounts, getWalletDBHeight, doClaimAllGas } from '../api/network'
+import { decryptWIF, generateEncryptedWIF } from '../api/crypto'
 
 import { ActionConstants as actions } from '../actions'
 import { DropDownHolder } from '../utils/DropDownHolder'
@@ -50,7 +51,8 @@ export function* createWalletFlow(args) {
     try {
         yield put({ type: actions.wallet.CREATE_WALLET_START })
         yield call(delay, 1000) // to give the UI-thread time to show the 'generating view'
-        const result = yield call(generateEncryptedWif, passphrase, wif) // too computational heavy. Blocks Animations.
+
+        const result = yield call(generateEncryptedWIF, passphrase, wif) // too computational heavy. Blocks Animations.
         // Breaking it up in the individual parts with delays didn't help
         // possibly using requestAnimationframe(()=>{call funcs here}) could work. try later
 
@@ -65,7 +67,7 @@ function* decryptWalletKeys(encryptedKey, passphrase) {
     try {
         yield put({ type: actions.wallet.START_DECRYPT_KEYS })
         yield call(delay, 1000) // to allow UI to update before it gets locked by the computational heavy decrypt_wif function
-        const plainKey = yield call(decrypt_wif, encryptedKey, passphrase)
+        const plainKey = yield call(decryptWIF, encryptedKey, passphrase)
         yield put({ type: actions.wallet.LOGIN_SUCCESS, plainKey })
     } catch (error) {
         yield put({ type: actions.wallet.LOGIN_ERROR, error: 'Wrong passphrase' })

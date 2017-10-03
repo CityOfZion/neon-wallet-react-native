@@ -1,6 +1,6 @@
 import React from 'react'
 import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native'
-import { verifyAddress } from 'neon-js'
+import { isValidPublicAddress } from '../api/crypto/index'
 import FAIcons from 'react-native-vector-icons/FontAwesome'
 
 import Button from '../components/Button'
@@ -38,7 +38,7 @@ class AssetSendForm extends React.Component {
     _isValidInputForm(address, amount, assetType) {
         let result = true
         const balance = assetType == ASSET_TYPE.NEO ? this.props.neo : this.props.gas
-        if (address == undefined || address.length <= 0 || verifyAddress(address) != true || address.charAt(0) !== 'A') {
+        if (address == undefined || address.length <= 0 || isValidPublicAddress(address) != true || address.charAt(0) !== 'A') {
             this.dropdown.alertWithType('error', 'Error', 'Not a valid destination address')
             result = false
         } else if (amount == undefined || amount < 0) {

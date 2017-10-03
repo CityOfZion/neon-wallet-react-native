@@ -1,4 +1,3 @@
-import { getPrivateKeyFromWIF, generatePrivateKey, getWIFFromPrivateKey, encryptWIF, getAccountsFromWIFKey } from 'neon-js'
 import { DropDownHolder } from '../utils/DropDownHolder'
 
 export function getMarketPriceUSD() {
@@ -40,26 +39,6 @@ export function nDecimalsNoneZero(input, n) {
     return Math.round(input * decimalPlaces) / decimalPlaces
 }
 
-export function isValidWIF(wif) {
-    const ENCODING_ERROR = -1
-    const WIF_VERIFICATION_FAILED = -2
-    let result = false
-
-    if (wif != undefined && wif.length == 52) {
-        const response = getPrivateKeyFromWIF(wif)
-
-        if (response != ENCODING_ERROR && response != WIF_VERIFICATION_FAILED) {
-            result = true
-        }
-    }
-
-    if (result == false) {
-        DropDownHolder.getDropDown().alertWithType('error', 'Error', 'Invalid key')
-    }
-
-    return result
-}
-
 export function isValidPassphrase(pw1, pw2) {
     var result = false
     if (pw1 && pw2) {
@@ -74,19 +53,4 @@ export function isValidPassphrase(pw1, pw2) {
         DropDownHolder.getDropDown().alertWithType('error', 'Error', 'Passphrases cannot be empty')
     }
     return result
-}
-
-export function generateEncryptedWif(passphrase, existingWIF) {
-    let wif
-    if (existingWIF != undefined) {
-        wif = existingWIF
-    } else {
-        wif = getWIFFromPrivateKey(generatePrivateKey())
-    }
-    return encryptWIF(wif, passphrase).then(encryptedWif => ({
-        wif,
-        encryptedWif,
-        passphrase,
-        address: getAccountsFromWIFKey(wif)[0].address
-    }))
 }

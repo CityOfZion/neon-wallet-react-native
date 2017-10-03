@@ -58,11 +58,11 @@ class GeneratedKeysView extends React.Component {
     }
 
     _copyToClipBoard() {
-        const { passphrase, address, encryptedWif, wif } = this.props
+        const { passphrase, address, encryptedWIF, wif } = this.props
         const data = {
             passphrase: passphrase,
             public_address: address,
-            encrypted_key: encryptedWif,
+            encrypted_key: encryptedWIF,
             private_key: wif
         }
         Clipboard.setString(JSON.stringify(data))
@@ -70,7 +70,7 @@ class GeneratedKeysView extends React.Component {
     }
 
     render() {
-        const { passphrase, address, encryptedWif, wif } = this.props
+        const { passphrase, address, encryptedWIF, wif } = this.props
         return (
             <ScrollView>
                 <View style={styles.warningView}>
@@ -84,7 +84,7 @@ class GeneratedKeysView extends React.Component {
                 <View style={styles.dataList}>
                     <KeyDataRow title="Passphrase" value={passphrase} />
                     <KeyDataRow title="Public address" value={address} />
-                    <KeyDataRow title="Encrypted key" value={encryptedWif} />
+                    <KeyDataRow title="Encrypted key" value={encryptedWIF} />
                     <KeyDataRow title="Private key" value={wif} />
                 </View>
                 <Button onPress={this._copyToClipBoard.bind(this)} title="Copy data to clipboard" />
@@ -104,7 +104,7 @@ GeneratedKeysView.propTypes = {
     saveKeyCallback: PropTypes.func,
     wif: PropTypes.string,
     passphrase: PropTypes.string,
-    encryptedWif: PropTypes.string,
+    encryptedWIF: PropTypes.string,
     address: PropTypes.string
 }
 

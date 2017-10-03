@@ -1,5 +1,5 @@
 import { ActionConstants as actions } from '../actions'
-import { getAccountsFromWIFKey } from 'neon-js'
+import { getAccountFromWIF } from '../api/crypto'
 
 import { ASSET_TYPE } from '../actions/wallet'
 
@@ -13,7 +13,7 @@ export default function order(state = {}, action) {
                 wif: action.data.wif,
                 address: action.data.address,
                 passphrase: action.data.passphrase,
-                encryptedWif: action.data.encryptedWif,
+                encryptedWIF: action.data.encryptedWIF,
                 generating: false
             }
         case actions.wallet.SAVE_ENCRYPTED_KEY:
@@ -32,7 +32,7 @@ export default function order(state = {}, action) {
                 wif: null,
                 address: null,
                 passphrase: null,
-                encryptedWif: null,
+                encryptedWIF: null,
                 generating: false,
                 decrypting: false,
                 loggedIn: false,
@@ -53,7 +53,7 @@ export default function order(state = {}, action) {
                 decrypting: true
             }
         case actions.wallet.LOGIN_SUCCESS:
-            const account = getAccountsFromWIFKey(action.plainKey)[0]
+            const account = getAccountFromWIF(action.plainKey)
             return {
                 ...state,
                 wif: action.plainKey,

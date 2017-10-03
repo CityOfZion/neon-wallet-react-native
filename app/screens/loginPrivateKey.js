@@ -7,7 +7,7 @@ import { DropDownHolder } from '../utils/DropDownHolder'
 import { bindActionCreatorsExt } from '../utils/bindActionCreatorsExt'
 import { connect } from 'react-redux'
 import { ActionCreators } from '../actions'
-import { isValidWIF } from '../utils/walletStuff'
+import { isValidWIF } from '../api/crypto'
 
 class LoginPrivateKey extends React.Component {
     _walletLogin() {
