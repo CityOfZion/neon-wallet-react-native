@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node node_modules/react-native/local-cli/cli.js start",
-    "postinstall": "rn-nodeify --install buffer,stream,child_process --hack",
+    "postinstall": "rn-nodeify --install buffer,stream,child_process --hack && npm install --save node-libs-react-native",
     "test": "jest",
     "prepare": "patch-package"
   },
