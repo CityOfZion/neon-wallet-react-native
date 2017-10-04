@@ -232,6 +232,84 @@ export function generateEncryptedWIF(passphrase, existingWIF) {
     return result
 }
 
+/**
+ * Constructs a ContractTransaction based on the given params. A ContractTransaction is a basic transaction to send NEO/GAS.
+ * @param {Coin[]} coins - A list of relevant assets available at the address which the public key is provided.
+ * @param {string} publicKeyEncoded - The encoded public key of the address from which the assets are coming from.
+ * @param {string} toAddress - The address which the assets are going to.
+ * @param {number|string} amount - The amount of assets to send.
+ * @returns {string} A serialised transaction ready to be signed with the corresponding private key of publicKeyEncoded.
+ */
+// export function buildContractTransaction(coins, publicKeyEncoded, destinationAddress, amount) {
+//     if (!isValidPublicAddress(destinationAddress)) {
+//         throw new Error('Invalid destination address')
+//     }
+//     let programHash = bs58.decode(toAddress)
+//     programHash = programHash.slice(1, 21)
+
+//     let signatureScript = createSignatureScript(publicKeyEncoded)
+//     let myProgramHash = getHash(signatureScript)
+
+//     let inputData = getInputData(coins, amount)
+// }
+
+// coins = list
+// taking it as is from https://github.com/hmcq6/neon-js/blob/39dc88c8068fd066e6b1ffdf4cf137f22c9d4974/src/wallet.js
+// for the time being
+// function getInputData(coins, amount) {
+//     let coinOrdered = quickSort(coin.list, 0, coin.list - 1)
+//     const sum = coinOrdered.reduce((sum, coin) => sum + parseFloat(coin.value), 0)
+
+//     // if sum < amount then exit
+//     let amount = parseFloat(amount)
+//     if (sum < amount) return -1 // insufficientFunds
+
+//     // find input coins
+//     let k = 0
+//     while (parseFloat(coinOrdered[k].value) <= amount) {
+//         amount = amount - parseFloat(coinOrdered[k].value)
+//         if (amount == 0) break
+//         k = k + 1
+//     }
+
+//     /////////////////////////////////////////////////////////////////////////
+//     // coin[0]- coin[k]
+
+//     // 34 = index (1byte), txid (32 bytes), value (1byte)
+//     const ENTRY_LENGTH = 34
+
+//     // allocate enough space to store UTXO's
+//     let data = new Uint8Array(1 + ENTRY_LENGTH * (k + 1))
+
+//     // input count
+//     data.set(hexstring2ab(numStoreInMemory((k + 1).toString(16), 2)))
+
+//     for (let x = 0; x < k + 1; x++) {
+//         // previous output hash reverse(txid)
+//         data.set(reverseArray(hexstring2ab(coinOrdered[x].txid)), 1 + x * 34)
+//         //data.set(hexstring2ab(coinOrdered[x]['txid']), pos);
+
+//         // previous output index
+//         //inputIndex = numStoreInMemory(coinOrdered[x]['n'].toString(16), 2);
+//         data.set(hexstring2ab(numStoreInMemory(coinOrdered[x].index.toString(16), 4)), 1 + x * 34 + 32)
+//     }
+
+//     /////////////////////////////////////////////////////////////////////////
+
+//     // calc coin_amount
+//     let coinAmount = 0
+//     for (let i = 0; i < k + 1; i++) {
+//         coinAmount += parseFloat(coinOrdered[i].value)
+//     }
+
+//     /////////////////////////////////////////////////////////////////////////
+
+//     return {
+//         amount: coinAmount,
+//         data
+//     }
+// }
+
 /*
  *
  *  Internal usage functions 

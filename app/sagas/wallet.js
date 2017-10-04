@@ -1,7 +1,7 @@
 import { delay } from 'redux-saga'
 import { put, takeEvery, call, all, takeLatest, select, fork, take, cancel, cancelled, race } from 'redux-saga/effects'
 import { getWallet, getNetwork, getWalletGasBalance } from './selectors'
-import { getBalance, getTransactionHistory, doSendAsset, getClaimAmounts, getWalletDBHeight, doClaimAllGas } from '../api/network'
+import { getBalance, getTransactionHistory, sendAsset, getClaimAmounts, getWalletDBHeight, doClaimAllGas } from '../api/network'
 import { decryptWIF, generateEncryptedWIF } from '../api/crypto'
 
 import { ActionConstants as actions } from '../actions'
@@ -75,10 +75,10 @@ function* decryptWalletKeys(encryptedKey, passphrase) {
     }
 }
 
-function* retrieveBalance(network, address) {
+function* retrieveBalance(address) {
     try {
         yield put({ type: actions.wallet.GET_BALANCE })
-        const balance = yield call(getBalance, network, address)
+        const balance = yield call(getBalance, address)
         yield put({ type: actions.wallet.GET_BALANCE_SUCCESS, neo: balance.Neo, gas: balance.Gas })
     } catch (error) {
         yield put({ type: actions.wallet.GET_BALANCE_ERROR, error: error })
@@ -95,20 +95,20 @@ function* retrieveMarketPrice() {
     }
 }
 
-function* retrieveTransactionHistory(network, address) {
+function* retrieveTransactionHistory(address) {
     try {
         yield put({ type: actions.wallet.GET_TRANSACTION_HISTORY })
-        const transactions = yield call(getTransactionHistory, network, address)
+        const transactions = yield call(getTransactionHistory, address)
         yield put({ type: actions.wallet.GET_TRANSACTION_HISTORY_SUCCESS, transactions: transactions })
     } catch (error) {
         yield put({ type: actions.wallet.GET_TRANSACTION_HISTORY_ERROR, error: error })
     }
 }
 
-function* retrieveClaimAmount(network, address) {
+function* retrieveClaimAmount(address) {
     try {
         yield put({ type: actions.wallet.GET_AVAILABLE_GAS_CLAIM })
-        const claimAmounts = yield call(getClaimAmounts, network, address)
+        const claimAmounts = yield call(getClaimAmounts, address)
         yield put({ type: actions.wallet.GET_AVAILABLE_GAS_CLAIM_SUCCESS, claimAmounts: claimAmounts })
         // perhaps disable button/functionality until next block update?
     } catch (error) {
@@ -122,15 +122,15 @@ function* retrieveData() {
     const network = yield select(getNetwork)
 
     yield put({ type: actions.network.UPDATE_BLOCK_HEIGHT })
-    const blockHeight = yield call(getWalletDBHeight, network.net)
+    const blockHeight = yield call(getWalletDBHeight)
 
     if (blockHeight > network.blockHeight[network.net]) {
         yield put({ type: actions.network.SET_BLOCK_HEIGHT, blockHeight: blockHeight })
         yield all([
-            call(retrieveBalance, network.net, wallet.address),
+            call(retrieveBalance, wallet.address),
             call(retrieveMarketPrice),
-            call(retrieveTransactionHistory, network.net, wallet.address),
-            call(retrieveClaimAmount, network.net, wallet.address)
+            call(retrieveTransactionHistory, wallet.address),
+            call(retrieveClaimAmount, wallet.address)
         ])
     }
     yield call(delay, BLOCKCHAIN_UPDATE_INTERVAL)
@@ -178,7 +178,7 @@ function* sendAssetFlow(args) {
     const FIVE_SECONDS = 5000
 
     try {
-        yield call(doSendAsset, network.net, toAddress, wallet.wif, assetType, amount)
+        yield call(sendAsset, toAddress, wallet.wif, assetType, amount)
 
         if (toAddress === wallet.address) {
             // Then we're just doing a transaction to release all "unspent_claim", so we can claim the GAS
@@ -213,13 +213,13 @@ function* sendAssetFlow(args) {
     }
 }
 
-function* claim(network, wif) {
+function* claim(wif) {
     // doClaimAllGas example usage
     // https://github.com/CityOfZion/neon-wallet/blob/1d0d037ae5813c0e04af4a196053923d8c0cfe57/app/components/Claim.js#L13
     // https://github.com/CityOfZion/neon-js/blob/ec8ba51a4fb8dea3c9f777db002b9c2e5c8a8ad0/src/api.js#L45
     try {
         yield put({ type: actions.wallet.CLAIM_GAS_START })
-        const response = yield call(doClaimAllGas, network, wif)
+        const response = yield call(doClaimAllGas, wif)
         if (response.result == true) {
             yield put({ type: actions.wallet.CLAIM_GAS_SUCCESS })
         } else {
@@ -246,7 +246,6 @@ function* waitForTransactionToSelfToClear() {
 
 function* claimGASFlow() {
     const wallet = yield select(getWallet)
-    const network = yield select(getNetwork)
 
     /* If we have NEO balance in our wallet, then part or all of the available claim can be "unspent_claim".
      * We first have to release this. This can be done by sending to yourself. Read about it here:
@@ -262,7 +261,7 @@ function* claimGASFlow() {
 
         yield take(actions.wallet.TRANSACTION_TO_SELF_CLEARED)
     }
-    yield call(claim, network.net, wallet.wif)
+    yield call(claim, wallet.wif)
 
     // Wait for GAS balance to be confirmed
     const oldGASBalance = wallet.gas

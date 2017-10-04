@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, Text, Image, StyleSheet } from 'react-native'
 import Tile from '../components/Tile'
+import { decryptWIF } from '../api/crypto'
 
 class Home extends React.Component {
     _goToScreen(screenName, payload) {
@@ -16,7 +17,16 @@ class Home extends React.Component {
                     <Tile title="Login using a saved wallet" onPress={() => this._goToScreen('LoginWallet')} />
                     <Tile title="Encrypt an existing key" dark onPress={() => this._goToScreen('CreateWallet', { useExistingKey: true })} />
                     <Tile title="Login using an encrypted key" onPress={() => this._goToScreen('LoginWithEncryptedKey')} />
-                    <Tile title="Manage neon settings" dark onPress={() => alert('Not yet implemented')} />
+                    <Tile
+                        title="Manage neon settings"
+                        dark
+                        onPress={() => {
+                            // const testVectorPassphrase = 'TestingOneTwoThree'
+                            // const testVectorEncryptedWIF = '6PYVPVe1fQznphjbUxXP9KZJqPMVnVwCx5s5pr5axRJ8uHkMtZg97eT5kL'
+                            // const testVectorUnencryptedWIF = 'L44B5gGEpqEDRS9vVPz7QT35jcBG2r3CZwSwQ4fCewXAhAhqGVpP'
+                            // alert(testVectorUnencryptedWIF === decryptWIF(testVectorEncryptedWIF, testVectorPassphrase))
+                        }}
+                    />
                     <Tile title="Login using a private key" onPress={() => this._goToScreen('LoginWithPrivateKey')} />
                 </View>
             </View>

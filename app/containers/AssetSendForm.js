@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         marginVertical: 5,
         paddingHorizontal: 10,
-        height: 30,
+        height: 36,
         fontSize: 14,
         backgroundColor: 'white',
         color: '#333333',

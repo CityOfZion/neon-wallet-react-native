@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
         marginVertical: 5,
         paddingLeft: 10,
         // paddingTop: 5,
-        height: 30,
+        height: 36,
         fontSize: 14,
         backgroundColor: '#E8F4E5',
         color: '#333333'
