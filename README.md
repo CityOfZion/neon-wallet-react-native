@@ -10,10 +10,6 @@ Use at your own risk! It's still in development stages. While I tried to make it
 ### Installation
 `npm install`
 
-Then apply the following react-navigation patch: [Add headerLeftOnPress](https://github.com/react-community/react-navigation/pull/1291)
-
-Note: this should later be automated by using something like [patch-package](https://github.com/ds300/patch-package/)
-
 ### Run
 `react-native run-ios`
 or
@@ -35,3 +31,6 @@ or
 [ ] add QR scanning of keys
 
 [ ] add [NEP5 support](https://github.com/neo-project/proposals/pull/4) (ICO tokens)
+
+**Vn (Nice to have)
+[ ] Completely remove any node core/rn-nodeify dependencies (i.e. find pure replacements for crypto or move all to native)

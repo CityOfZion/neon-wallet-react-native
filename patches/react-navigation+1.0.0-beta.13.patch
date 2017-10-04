@@ -1,0 +1,30 @@
+diff --git a/node_modules/react-navigation/src/TypeDefinition.js b/node_modules/react-navigation/src/TypeDefinition.js
+index 2937712..de10350 100644
+--- a/node_modules/react-navigation/src/TypeDefinition.js
++++ b/node_modules/react-navigation/src/TypeDefinition.js
+@@ -275,6 +275,7 @@ export type NavigationStackScreenOptions = {
+   headerTitleStyle?: AnimatedTextStyleProp,
+   headerTintColor?: string,
+   headerLeft?: React.Element<*>,
++  headerLeftOnPress?: () => void,
+   headerBackTitle?: string,
+   headerTruncatedBackTitle?: string,
+   headerBackTitleStyle?: TextStyleProp,
+diff --git a/node_modules/react-navigation/src/views/Header/Header.js b/node_modules/react-navigation/src/views/Header/Header.js
+index 12f8646..3ecc05f 100644
+--- a/node_modules/react-navigation/src/views/Header/Header.js
++++ b/node_modules/react-navigation/src/views/Header/Header.js
+@@ -131,9 +131,12 @@ class Header extends React.PureComponent<void, HeaderProps, HeaderState> {
+     const width = this.state.widths[props.scene.key]
+       ? (this.props.layout.initWidth - this.state.widths[props.scene.key]) / 2
+       : undefined;
++    const onPress = () => {
++      this.props.navigation.goBack(null);
++    }
+     return (
+       <HeaderBackButton
+-        onPress={this._navigateBack}
++        onPress={options.headerLeftOnPress || onPress}
+         pressColorAndroid={options.headerPressColorAndroid}
+         tintColor={options.headerTintColor}
+         title={backButtonTitle}
