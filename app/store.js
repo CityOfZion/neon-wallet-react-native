@@ -27,7 +27,6 @@ let initialState = {
         passphrase: null,
         encryptedWIF: null,
         generating: false,
-        saved_keys: {}, // key: name
         decrypting: false,
         loggedIn: false,
         logInError: null,
@@ -52,6 +51,9 @@ let initialState = {
         sentToSelfSuccess: false,
         transactionCleared: false,
         gasClaimed: false
+    },
+    settings: {
+        saved_keys: {} // key: name
     }
 }
 

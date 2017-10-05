@@ -2,7 +2,6 @@ const CREATE_WALLET = 'WALLET/CREATE'
 const CREATE_WALLET_START = 'WALLET/CREATE_START'
 const CREATE_WALLET_SUCCESS = 'WALLET/CREATE_SUCCESS'
 const CREATE_WALLET_ERROR = 'WALLET/CREATE_ERROR'
-const SAVE_ENCRYPTED_KEY = 'WALLET/SAVE_ENCRYPTED_KEY'
 const RESET_STATE = 'WALLET/RESET_STATE'
 const LOGIN = 'WALLET/LOGIN'
 const LOGOUT = 'WALLET/LOGOUT'
@@ -39,7 +38,6 @@ export const constants = {
     CREATE_WALLET_START,
     CREATE_WALLET_SUCCESS,
     CREATE_WALLET_ERROR,
-    SAVE_ENCRYPTED_KEY,
     RESET_STATE,
     LOGIN,
     LOGIN_SUCCESS,
@@ -83,14 +81,6 @@ export function create(passphrase, wif) {
         type: CREATE_WALLET,
         passphrase,
         wif
-    }
-}
-
-export function saveKey(key, name) {
-    return {
-        type: SAVE_ENCRYPTED_KEY,
-        key,
-        name
     }
 }
 

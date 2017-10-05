@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
 })
 
 function mapStateToProps(state, ownProps) {
-    let key_pairs = state.wallet.saved_keys
+    let key_pairs = state.settings.saved_keys
     let keys = Object.keys(key_pairs)
     let options = []
     let longest_name = 0

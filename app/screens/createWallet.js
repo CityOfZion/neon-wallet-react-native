@@ -114,7 +114,7 @@ class CreateWallet extends React.Component {
     }
 
     _saveKey(key_name) {
-        this.props.wallet.saveKey(this.props.encryptedWIF, key_name)
+        this.props.settings.saveKey(this.props.encryptedWIF, key_name)
     }
 
     render() {

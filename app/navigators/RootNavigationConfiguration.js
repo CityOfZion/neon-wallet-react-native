@@ -7,6 +7,7 @@ import CreateWallet from '../screens/createWallet.js'
 import LoginWallet from '../screens/loginWallet'
 import LoginEncryptedKey from '../screens/loginEncryptedKey'
 import LoginPrivateKey from '../screens/loginPrivateKey'
+import Settings from '../screens/settings'
 import { WalletTabBar } from '../navigators/WalletTabBarConfiguration'
 //xxx import all remaining screens
 
@@ -63,6 +64,13 @@ const routeConfiguration = {
         screen: WalletTabBar,
         navigationOptions: {
             ...defaultOptions
+        }
+    },
+    Settings: {
+        screen: Settings,
+        navigationOptions: {
+            ...defaultOptions,
+            headerTitle: 'Settings'
         }
     }
 }

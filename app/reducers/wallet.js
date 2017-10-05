@@ -16,16 +16,6 @@ export default function order(state = {}, action) {
                 encryptedWIF: action.data.encryptedWIF,
                 generating: false
             }
-        case actions.wallet.SAVE_ENCRYPTED_KEY:
-            let newKeysList = {
-                ...state.saved_keys,
-                [action.key]: action.name
-            }
-            return {
-                ...state,
-                saved_keys: newKeysList
-            }
-
         case actions.wallet.RESET_STATE:
             return {
                 ...state,

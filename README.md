@@ -18,7 +18,9 @@ or
 ### Road map
 **V1 (Feature parity with [Neon-wallet](https://github.com/CityOfZion/neon-wallet))**
 
-[ ] Implement wallet settings screen (and enable redux-persist)
+[ ] ~~Implement wallet settings screen~~ (and enable redux-persist)
+
+[ ] Refactor to remove neon-js package dependency
 
 [ ] Add tests
 
