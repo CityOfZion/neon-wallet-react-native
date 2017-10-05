@@ -4,7 +4,6 @@ import bs58check from 'bs58check'
 import C from 'crypto-js'
 import CryptoJS from 'crypto-js'
 import ecurve from 'ecurve'
-import secureRandom from 'secure-random'
 import scrypt from './scrypt'
 import WIF from 'wif'
 
@@ -369,7 +368,8 @@ function getAddressFromScriptHash(scriptHash) {
  * @return {Buffer} Private key
  */
 function generatePrivateKey() {
-    return secureRandom(32, { type: 'Buffer' })
+    const randomBytes = C.lib.WordArray.random(32)
+    return Buffer.from(randomBytes.toString(), 'hex')
 }
 
 /**
