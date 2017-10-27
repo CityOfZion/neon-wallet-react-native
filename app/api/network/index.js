@@ -1,7 +1,6 @@
 import request from './request'
 import { getAccountFromWIF, buildContractTransactionData, buildContract, signTransactionData } from '../crypto'
 import { transferTransaction, signatureData, addContract, claimTransaction } from '../crypto/to_fix'
-import axios from 'axios'
 
 export function getBalance(address) {
     var path = '/v2/address/balance/' + address
@@ -81,24 +80,17 @@ function getRPCEndpoint() {
 
 export const queryRPC = (method, params, id = 1) => {
     const jsonRpcData = { method, params, id, jsonrpc: '2.0' }
-    const jsonRequest = axios.create({ headers: { 'Content-Type': 'application/json' } })
     return getRPCEndpoint().then(rpcEndpoint => {
-        return jsonRequest.post(rpcEndpoint, jsonRpcData).then(response => {
-            return response.data
+        var options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jsonRpcData)
+        }
+        return request(rpcEndpoint, options, true).then(response => {
+            return response
         })
-
-        // TODO: figure out why my fetch gives network error O_o
-        // var options = {
-        //     method: 'POST',
-        //     headers: {
-        //         Accept: 'application/json',
-        //         'Content-Type': 'application/json'
-        //     },
-        //     body: JSON.stringify(jsonRpcData)
-        // }
-        // return request(rpcEndpoint, options).then(response => {
-        //     return response
-        // })
     })
 }
 

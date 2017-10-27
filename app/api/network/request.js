@@ -10,7 +10,7 @@ function listener() {
     rpcUrl = network === 'MainNet' ? 'http://api.wallet.cityofzion.io' : 'http://testnet-api.wallet.cityofzion.io'
 }
 
-const request = function(url, options = {}) {
+const request = function(url, options = {}, ignore_base_url = false) {
     const onSuccess = function(response) {
         // console.debug(('request success!', response))
         if (response.status >= 200 && response.status < 300) {
@@ -28,7 +28,13 @@ const request = function(url, options = {}) {
         }
         return Promise.reject(e)
     }
-    base_url = 'http://testnet-api.wallet.cityofzion.io' //rpcUrl
+
+    if (ignore_base_url) {
+        base_url = ''
+    } else {
+        base_url = 'http://testnet-api.wallet.cityofzion.io' //rpcUrl
+    }
+
     init = {
         headers: {
             'Content-Type': 'application/json'
