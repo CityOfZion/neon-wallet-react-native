@@ -1,5 +1,5 @@
 import request from './request'
-import { getAccountFromWIF } from '../crypto'
+import { getAccountFromWIF, buildContractTransactionData, buildContract, signTransactionData } from '../crypto'
 import { transferTransaction, signatureData, addContract, claimTransaction } from '../crypto/to_fix'
 import axios from 'axios'
 
@@ -36,6 +36,7 @@ export function getClaimAmounts(address) {
 }
 
 function getAssetId(assetType) {
+    // more info here: http://docs.neo.org/en-us/node/api/getbalance.html
     const neoId = 'c56f33fc6ecfcd0c225c4ab356fee59390af8560be0e930faebe74a6daff7c9b'
     const gasId = '602c79718b16e442de58778e148d0b1084e3b2dffd5de6b7b16cee7969282de7'
 
@@ -61,18 +62,12 @@ export function sendAsset(destinationAddress, WIF, assetType, amount) {
     const fromAccount = getAccountFromWIF(WIF)
 
     return getBalance(fromAccount.address).then(response => {
-        const coinsData = {
-            assetid: assetId,
-            list: response.unspent[assetType],
-            balance: response[assetType],
-            name: assetType
-        }
+        const UTXOs = response.unspent[assetType]
+        const txData = buildContractTransactionData(UTXOs, assetId, fromAccount.publicKeyEncoded, destinationAddress, amount)
+        const signature = signTransactionData(txData, fromAccount.privateKey)
+        const rawTXData = buildContract(txData, signature, fromAccount.publicKeyEncoded)
 
-        // TODO: continue refactor here
-        const txData = transferTransaction(coinsData, fromAccount.publicKeyEncoded, destinationAddress, amount)
-        const sign = signatureData(txData, fromAccount.privateKey)
-        const txRawData = addContract(txData, sign, fromAccount.publicKeyEncoded)
-        return queryRPC('sendrawtransaction', [txRawData], 4)
+        return queryRPC('sendrawtransaction', [rawTXData.toString('hex')], 4)
     })
 }
 

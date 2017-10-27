@@ -6,6 +6,8 @@ import CryptoJS from 'crypto-js'
 import ecurve from 'ecurve'
 import scrypt from './scrypt'
 import WIF from 'wif'
+import { ec } from 'elliptic'
+import long from 'long'
 
 const NEP_HEADER = '0142'
 const NEP_FLAG = 'e0'
@@ -40,7 +42,7 @@ export function isValidPublicAddress(address) {
         let programBuffer = new Buffer(programSHA256_2.toString(), 'hex')
 
         // verify address
-        if (programBuffer.readUInt32LE(0) ^ (programHashBuffer.readUInt32LE(21) == 0)) {
+        if ((programBuffer.readUInt32LE(0) ^ programHashBuffer.readUInt32LE(21)) == 0) {
             result = true
         }
     }
@@ -124,7 +126,6 @@ export function encryptWIF(wif, passphrase) {
         const addressHash = CryptoJS.SHA256(CryptoJS.SHA256(CryptoJS.enc.Latin1.parse(account.address)))
             .toString()
             .slice(0, 8)
-
         const derived = Buffer.from(
             scrypt(
                 Buffer.from(passphrase, 'utf8'),
@@ -150,10 +151,9 @@ export function encryptWIF(wif, passphrase) {
         )
         // Construct
         const assembled = NEP_HEADER + NEP_FLAG + addressHash + encrypted.ciphertext.toString()
-        console.log('encrypted_assembled:', assembled)
-        console.log('encrypted.addressHash', addressHash)
         return bs58check.encode(Buffer.from(assembled, 'hex'))
     }
+    return undefined
 }
 
 /**
@@ -232,88 +232,230 @@ export function generateEncryptedWIF(passphrase, existingWIF) {
 }
 
 /**
+* @typedef {Object} UTXO - Unspent Transaction Output
+* @property {number} index - Previous transactoin index.
+* @property {string} txid - Previous transaction hash.
+* @property {number} value - Unspent amount.
+*/
+
+/**
+ * Build the final contract data
+ * @param {Buffer} transactionData - the constructed input/output data
+ * @param {Buffer} transactionSignature - the signature over the transactionData
+ * @param {Buffer} publicKeyEncoded - encoded public key
+ * @returns {Buffer} raw contract data
+ */
+export function buildContract(transactionData, transactionSignature, publicKeyEncoded) {
+    const signatureScript = createSignatureScript(publicKeyEncoded)
+    let offset = 0
+    const magic = Buffer.from([0x01, 0x41, 0x40]) // something with signature count, struct size, signature length
+    let data = Buffer.alloc(transactionData.length + transactionSignature.length + signatureScript.length + 4)
+
+    data.fill(transactionData, offset, transactionData.length)
+    offset += transactionData.length
+
+    data.fill(magic, offset, offset + magic.length)
+    offset += magic.length
+
+    data.fill(transactionSignature, offset, offset + transactionSignature.length)
+    offset += transactionSignature.length
+
+    data.writeUInt8(0x23, offset)
+    offset += 1
+
+    data.fill(signatureScript, offset)
+
+    return data
+}
+
+/**
+ * Signs the transaction data with the private key
+ * @property {Buffer} transactionData - transaction data to sign
+ * @property {Buffer} privateKey - private key to sign the data with
+ * @returns {Buffer} signature of transaction data
+ */
+export function signTransactionData(transactionData, privateKey) {
+    const elliptic = new ec('p256')
+    let preppedData = CryptoJS.enc.Hex.parse(transactionData.toString('hex'))
+    const dataSHA256 = new Buffer(CryptoJS.SHA256(preppedData).toString(), 'hex')
+    const sig = elliptic.sign(dataSHA256, privateKey, null)
+
+    return Buffer.concat([sig.r.toArrayLike(Buffer, 'be', 32), sig.s.toArrayLike(Buffer, 'be', 32)])
+}
+
+/**
  * Constructs a ContractTransaction based on the given params. A ContractTransaction is a basic transaction to send NEO/GAS.
- * @param {Coin[]} coins - A list of relevant assets available at the address which the public key is provided.
- * @param {string} publicKeyEncoded - The encoded public key of the address from which the assets are coming from.
- * @param {string} toAddress - The address which the assets are going to.
+ * @param {UTXO[]} UTXOs - A list of Unspend Transactions records belonging to a specific address.
+ * @param {string} assetId - Unique string identify the asset type 'NEO/GAS' (Uint256.toHex())
+ * @param {string} publicKeyEncoded - The encoded public key of the address from which the assets are to be send.
+ * @param {string} destinationAddress - The address to which the assets are going to be send.
  * @param {number|string} amount - The amount of assets to send.
  * @returns {string} A serialised transaction ready to be signed with the corresponding private key of publicKeyEncoded.
  */
-// export function buildContractTransaction(coins, publicKeyEncoded, destinationAddress, amount) {
-//     if (!isValidPublicAddress(destinationAddress)) {
-//         throw new Error('Invalid destination address')
-//     }
-//     let programHash = bs58.decode(toAddress)
-//     programHash = programHash.slice(1, 21)
+export function buildContractTransactionData(UTXOs, assetId, publicKeyEncoded, destinationAddress, amount) {
+    if (!isValidPublicAddress(destinationAddress)) {
+        throw new Error('Invalid destination address')
+    }
 
-//     let signatureScript = createSignatureScript(publicKeyEncoded)
-//     let myProgramHash = getHash(signatureScript)
+    let destinationAddressHash = bs58.decode(destinationAddress).slice(1, 21)
+    let accountAddressHash = getHash(createSignatureScript(publicKeyEncoded)) // own pub key hash
 
-//     let inputData = getInputData(coins, amount)
-// }
+    const CONTRACT_TRANSACTION_TYPE = 0x80
+    const TRADING_VERSION = 0x00 // fixed for now -> http://docs.neo.org/en-us/node/network-protocol.html
+    const TRANSACTION_ATTRIBUTES = 0x00 // no attributes
+    const HEADER = Buffer.from([CONTRACT_TRANSACTION_TYPE, TRADING_VERSION, TRANSACTION_ATTRIBUTES])
 
-// coins = list
-// taking it as is from https://github.com/hmcq6/neon-js/blob/39dc88c8068fd066e6b1ffdf4cf137f22c9d4974/src/wallet.js
-// for the time being
-// function getInputData(coins, amount) {
-//     let coinOrdered = quickSort(coin.list, 0, coin.list - 1)
-//     const sum = coinOrdered.reduce((sum, coin) => sum + parseFloat(coin.value), 0)
+    let { inputs, totalValueOfInputs } = buildInputDataFrom(UTXOs, amount)
+    let outputs = buildOutputDataFrom(amount, totalValueOfInputs, assetId, accountAddressHash, destinationAddressHash)
 
-//     // if sum < amount then exit
-//     let amount = parseFloat(amount)
-//     if (sum < amount) return -1 // insufficientFunds
-
-//     // find input coins
-//     let k = 0
-//     while (parseFloat(coinOrdered[k].value) <= amount) {
-//         amount = amount - parseFloat(coinOrdered[k].value)
-//         if (amount == 0) break
-//         k = k + 1
-//     }
-
-//     /////////////////////////////////////////////////////////////////////////
-//     // coin[0]- coin[k]
-
-//     // 34 = index (1byte), txid (32 bytes), value (1byte)
-//     const ENTRY_LENGTH = 34
-
-//     // allocate enough space to store UTXO's
-//     let data = new Uint8Array(1 + ENTRY_LENGTH * (k + 1))
-
-//     // input count
-//     data.set(hexstring2ab(numStoreInMemory((k + 1).toString(16), 2)))
-
-//     for (let x = 0; x < k + 1; x++) {
-//         // previous output hash reverse(txid)
-//         data.set(reverseArray(hexstring2ab(coinOrdered[x].txid)), 1 + x * 34)
-//         //data.set(hexstring2ab(coinOrdered[x]['txid']), pos);
-
-//         // previous output index
-//         //inputIndex = numStoreInMemory(coinOrdered[x]['n'].toString(16), 2);
-//         data.set(hexstring2ab(numStoreInMemory(coinOrdered[x].index.toString(16), 4)), 1 + x * 34 + 32)
-//     }
-
-//     /////////////////////////////////////////////////////////////////////////
-
-//     // calc coin_amount
-//     let coinAmount = 0
-//     for (let i = 0; i < k + 1; i++) {
-//         coinAmount += parseFloat(coinOrdered[i].value)
-//     }
-
-//     /////////////////////////////////////////////////////////////////////////
-
-//     return {
-//         amount: coinAmount,
-//         data
-//     }
-// }
+    // final result = unsigned raw transaction
+    return Buffer.concat([HEADER, inputs, outputs])
+}
 
 /*
  *
  *  Internal usage functions 
  * 
  */
+
+/**
+ * 
+ * @param {Number} amount - amount to be send
+ * @param {Number} totalValueOfInputs - sum of UTXO's to be used to create outputs
+ * @param {String} assetId - NEO / GAS network id
+ * @param {Buffer} accountAddressHash - own account address hash
+ * @param {Buffer} destinationAddressHash - recipient address hash
+ */
+function buildOutputDataFrom(amount, totalValueOfInputs, assetId, accountAddressHash, destinationAddressHash) {
+    // if we send our complete balance we need just 1 output entry
+    // otherwise we need a second output to return the remainder of the balance to ourselves
+    const OUTPUT_COUNT = amount == totalValueOfInputs ? 0x01 : 0x02
+    const OUTPUT_ENTRY_SIZE = 60 // 32 assetId, 8 value, 20 scriptHash
+    let offset = 0
+
+    // First output -> asset to send to destination address
+    let data = Buffer.alloc(1 + OUTPUT_COUNT * OUTPUT_ENTRY_SIZE)
+    data.writeInt8(OUTPUT_COUNT, 0)
+    offset += 1
+
+    const NETWORK_STORAGE_MULTIPLIER = 100000000
+    const amountToRecipient = Number(amount * NETWORK_STORAGE_MULTIPLIER)
+    const entry0 = getOutputEntryFrom(assetId, amountToRecipient, destinationAddressHash)
+    data.fill(entry0, offset, offset + entry0.length)
+
+    if (OUTPUT_COUNT == 0x02) {
+        // we have remaining funds to send back to ourselves
+        offset += entry0.length
+
+        const remainder = Number(totalValueOfInputs * NETWORK_STORAGE_MULTIPLIER - amountToRecipient)
+        const entry1 = getOutputEntryFrom(assetId, remainder, accountAddressHash)
+        data.fill(entry1, offset, offset + entry1.length)
+    }
+
+    return data
+}
+
+/**
+ * Create a single output record
+ * @param {string} assetId - Unique string identify the asset type 'NEO/GAS' (Uint256.toHex())
+ * @param {Number} amount - The amount to send.
+ * @param {Buffer} scripthash - scripthash of destination address
+ */
+function getOutputEntryFrom(assetId, amount, scripthash) {
+    const ASSET_ID_LENGTH = 32
+    const VALUE_LENGTH = 8
+    const SCRIPTHASH_LENGTH = 20
+    const OUTPUT_ENTRY_SIZE = ASSET_ID_LENGTH + VALUE_LENGTH + SCRIPTHASH_LENGTH
+
+    let data = Buffer.alloc(OUTPUT_ENTRY_SIZE)
+    offset = 0
+
+    const reversedAssetId = reverse(Buffer.from(assetId, 'hex'))
+    data.fill(reversedAssetId, offset, offset + ASSET_ID_LENGTH)
+    offset += ASSET_ID_LENGTH
+
+    // need extra 'long' package because javascript doesn't support logical AND on 64bits. It converts it to 32bit and does some .... things.
+    let longValue = long.fromNumber(amount)
+    data.writeInt32LE(longValue.low, offset)
+    data.writeInt32LE(longValue.high, offset + 4)
+
+    offset += VALUE_LENGTH
+
+    data.fill(scripthash, offset, offset + SCRIPTHASH_LENGTH)
+
+    return data
+}
+
+/**
+ * Constructs the input data required to send `amountToSend` from the provided list of `UTXO` records
+ * @param {UTXO[]} UTXOs 
+ * @param {number|string} amountToSend 
+ * @returns {Object} {{Buffer}inputs: Buffer of input data, {number}totalValueOfInputs: sum of UTXO values}
+ */
+function buildInputDataFrom(UTXOs, amountToSend) {
+    let orderedUTXOs = UTXOs
+    for (let i = 0; i < orderedUTXOs.length - 1; i++) {
+        for (let j = 0; j < orderedUTXOs.length - 1 - i; j++) {
+            if (parseFloat(orderedUTXOs[j].value) < parseFloat(orderedUTXOs[j + 1].value)) {
+                let temp = orderedUTXOs[j]
+                orderedUTXOs[j] = orderedUTXOs[j + 1]
+                orderedUTXOs[j + 1] = temp
+            }
+        }
+    }
+    const totalAvailableFunds = orderedUTXOs.reduce((sum, utxo) => sum + parseFloat(utxo.value), 0)
+
+    // test for insufficient funding (althought this should already have been captured by the UI)
+    if (parseFloat(amountToSend) > totalAvailableFunds) return -1 // TODO: figure out better error/exit way
+
+    // calculate number of UTXO's required to have enough funds to send `amountToSend`
+    let count = 0
+    let totalValueOfInputs = 0
+    for (let i = 0; i < orderedUTXOs.length; i++) {
+        let value = parseFloat(orderedUTXOs[i].value)
+        amountToSend -= value
+        totalValueOfInputs += value
+        if (amountToSend <= 0) {
+            count = i + 1
+            break
+        }
+    }
+
+    const INPUT_COUNT = count
+    const INPUT_ENTRY_LENGTH = 34
+
+    // construct input data
+    let data = Buffer.alloc(1 + INPUT_ENTRY_LENGTH * INPUT_COUNT)
+    data.writeInt16LE(INPUT_COUNT, 0)
+
+    // foreach required input build a valid entry/record
+    for (let i = 0; i < INPUT_COUNT; i++) {
+        let offset = 1 + i * INPUT_ENTRY_LENGTH
+        const inputEntry = getInputEntryFrom(orderedUTXOs[i])
+
+        data.fill(inputEntry, offset, INPUT_ENTRY_LENGTH + offset)
+    }
+
+    return {
+        inputs: data,
+        totalValueOfInputs
+    }
+}
+
+/**
+ * Constructs a raw input entry from an UTXO record
+ * @param {UTXO} utxo - single record
+ * @return {Buffer} a buffer containing the raw input entry data
+ */
+function getInputEntryFrom(utxo) {
+    // 32 bytes previous hash
+    // 2 bytes previous index
+    let entry = Buffer.alloc(34)
+    let reversedHash = reverse(Buffer.from(utxo.txid, 'hex'))
+    entry.fill(reversedHash, 0, 32)
+    entry.writeInt16LE(utxo.index, 32)
+    return entry
+}
 
 /**
  * Get hash of Buffer input
@@ -323,7 +465,7 @@ export function generateEncryptedWIF(passphrase, existingWIF) {
 function getHash(signatureScript) {
     let ProgramHexString = CryptoJS.enc.Hex.parse(signatureScript.toString('hex'))
     let ProgramSha256 = CryptoJS.SHA256(ProgramHexString)
-    return CryptoJS.RIPEMD160(ProgramSha256)
+    return new Buffer(CryptoJS.RIPEMD160(ProgramSha256).toString(), 'hex')
 }
 
 /**
@@ -417,8 +559,21 @@ function getAccountFromPrivateKey(privateKey) {
     const publicKeyHash = getHash(publicKeyEncoded)
     const script = createSignatureScript(publicKeyEncoded)
     const scriptHash = getHash(script)
-    const address = getAddressFromScriptHash(new Buffer(scriptHash.toString(), 'hex'))
+    const address = getAddressFromScriptHash(scriptHash)
     /* get account from public key end (getAccountFromPublicKey) */
 
     return { privateKey, publicKeyEncoded, publicKeyHash, scriptHash, address }
+}
+
+/**
+ * Reverse the elements in an array of type {Buffer}
+ * @param {Buffer} input buffer
+ * @returns {Buffer} A buffer in reversed order
+ */
+function reverse(input) {
+    let result = Buffer.alloc(input.length)
+    for (let i = input.length - 1, offset = 0; i >= 0; i--, offset++) {
+        result[offset] = input[i]
+    }
+    return result
 }
