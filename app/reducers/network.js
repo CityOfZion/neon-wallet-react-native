@@ -25,6 +25,14 @@ export default function network(state = {}, action) {
                 net: state.net === NETWORK_MAIN ? NETWORK_TEST : NETWORK_MAIN
             }
         }
+        case actions.wallet.RESET_STATE:
+            return {
+                ...state,
+                blockHeight: {
+                    TestNet: 0,
+                    MainNet: 0
+                }
+            }
         default:
             return state
     }
