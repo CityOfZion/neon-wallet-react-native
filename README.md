@@ -20,7 +20,7 @@ or
 
 [ ] ~~Implement wallet settings screen~~ (and enable redux-persist)
 
-[ ] Refactor to remove neon-js package dependency
+[ ] ~~Refactor to remove neon-js package dependency~~
 
 [ ] Add tests
 
