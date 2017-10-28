@@ -125,7 +125,7 @@ export function getAccountFromWIF(wif) {
 /**
  * Encrypts a WIF using a given keyphrase under NEP-2 Standard.
  * @param {String} wif - WIF key to encrypt (52 chars long).
- * @param {string} passphrase - The password. Will be encoded as UTF-8.
+ * @param {string} passphrase - The password. Will be encoded as UTF-8 + NFC normalized.
  * @returns {string|undefined} If successful the encrypted key in Base58 (Case sensitive) otherwise undefined
  */
 export function encryptWIF(wif, passphrase) {
@@ -181,7 +181,7 @@ export function decryptWIF(encryptedWIF, passphrase) {
 
     const derived = Buffer.from(
         scrypt(
-            Buffer.from(passphrase, 'utf8'),
+            Buffer.from(passphrase.normalize('NFC'), 'utf8'),
             addressHash,
             SCRYPT_PARAMS.ITERATIONS,
             SCRYPT_PARAMS.BLOCKSIZE,
