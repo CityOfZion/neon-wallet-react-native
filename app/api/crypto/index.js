@@ -8,6 +8,8 @@ import scrypt from './scrypt'
 import WIF from 'wif'
 import { ec } from 'elliptic'
 import long from 'long'
+import { getAssetId } from '../network'
+import { XOR, reverse } from './utils'
 
 const NEP_HEADER = '0142'
 const NEP_FLAG = 'e0'
@@ -20,12 +22,19 @@ const SCRYPT_PARAMS = {
 
 /**
  * @typedef {Object} Account
- * @property {Buffer} privateKey The private key in hex    DONE
- * @property {Buffer} publicKeyEncoded The public key in encoded form   DONE
+ * @property {Buffer} privateKey The private key in hex
+ * @property {Buffer} publicKeyEncoded The public key in encoded form
  * @property {Buffer} publicKeyHash Hash of the public key
  * @property {Buffer} programHash Program Hash to use for signing
  * @property {string} address Public address of the private key
  */
+
+/**
+* @typedef {Object} UTXO - Unspent Transaction Output
+* @property {number} index - Previous transactoin index.
+* @property {string} txid - Previous transaction hash.
+* @property {number} value - Unspent amount.
+*/
 
 /**
  * Test if address is a valid public address
@@ -232,20 +241,13 @@ export function generateEncryptedWIF(passphrase, existingWIF) {
 }
 
 /**
-* @typedef {Object} UTXO - Unspent Transaction Output
-* @property {number} index - Previous transactoin index.
-* @property {string} txid - Previous transaction hash.
-* @property {number} value - Unspent amount.
-*/
-
-/**
  * Build the final contract data
  * @param {Buffer} transactionData - the constructed input/output data
  * @param {Buffer} transactionSignature - the signature over the transactionData
  * @param {Buffer} publicKeyEncoded - encoded public key
- * @returns {Buffer} raw contract data
+ * @returns {Buffer} raw transaction data ready to be send with the 'sendrawtransaction' RPC command
  */
-export function buildContract(transactionData, transactionSignature, publicKeyEncoded) {
+export function buildRawTransaction(transactionData, transactionSignature, publicKeyEncoded) {
     const signatureScript = createSignatureScript(publicKeyEncoded)
     let offset = 0
     const magic = Buffer.from([0x01, 0x41, 0x40]) // something with signature count, struct size, signature length
@@ -290,7 +292,7 @@ export function signTransactionData(transactionData, privateKey) {
  * @param {string} publicKeyEncoded - The encoded public key of the address from which the assets are to be send.
  * @param {string} destinationAddress - The address to which the assets are going to be send.
  * @param {number|string} amount - The amount of assets to send.
- * @returns {string} A serialised transaction ready to be signed with the corresponding private key of publicKeyEncoded.
+ * @returns {Buffer} A transaction ready to be signed with the corresponding private key of publicKeyEncoded.
  */
 export function buildContractTransactionData(UTXOs, assetId, publicKeyEncoded, destinationAddress, amount) {
     if (!isValidPublicAddress(destinationAddress)) {
@@ -312,6 +314,30 @@ export function buildContractTransactionData(UTXOs, assetId, publicKeyEncoded, d
     return Buffer.concat([HEADER, inputs, outputs])
 }
 
+/**
+ * Build the raw TX data for claiming GAS
+ * @param {UTXO[]} claims - list of UTXO records. Example: http://testnet-api.wallet.cityofzion.io/v2/address/claims/<pubblic address> We only need a txid + index
+ * @param {Number} amountToRecipient - amount of gas to send to self
+ * @param {Buffer} publicKeyEncoded - encoded public key 
+ */
+export function buildClaimTransactionData(claims, amountToRecipient, publicKeyEncoded) {
+    let accountAddressHash = getHash(createSignatureScript(publicKeyEncoded)) // own pub key hash
+
+    const CLAIM_TRANSACTION_TYPE = 0x02
+    const TRADING_VERSION = 0x00 // fixed for now -> http://docs.neo.org/en-us/node/network-protocol.html
+    const TRANSACTION_ATTRIBUTES = 0x00 // no attributes
+    const INPUT_COUNT = 0x00
+    const OUTPUT_COUNT = 0x01
+
+    const HEADER = Buffer.from([CLAIM_TRANSACTION_TYPE, TRADING_VERSION])
+    const DATA2 = Buffer.from([TRANSACTION_ATTRIBUTES, INPUT_COUNT, OUTPUT_COUNT])
+
+    let claimSpecificData = buildInputsDataStructure(claims) // the claims data structure is equal to that of inputs[]
+    const outputData = getOutputEntryFrom(getAssetId('Gas'), amountToRecipient, accountAddressHash)
+
+    return Buffer.concat([HEADER, claimSpecificData, DATA2, outputData])
+}
+
 /*
  *
  *  Internal usage functions 
@@ -319,7 +345,7 @@ export function buildContractTransactionData(UTXOs, assetId, publicKeyEncoded, d
  */
 
 /**
- * 
+ * Build outputs[] data 
  * @param {Number} amount - amount to be send
  * @param {Number} totalValueOfInputs - sum of UTXO's to be used to create outputs
  * @param {String} assetId - NEO / GAS network id
@@ -374,7 +400,7 @@ function getOutputEntryFrom(assetId, amount, scripthash) {
     data.fill(reversedAssetId, offset, offset + ASSET_ID_LENGTH)
     offset += ASSET_ID_LENGTH
 
-    // need extra 'long' package because javascript doesn't support logical AND on 64bits. It converts it to 32bit and does some .... things.
+    // need extra 'long' package because javascript doesn't support logical AND on 64bits. It converts it internally to 32bit and does some .... things.
     let longValue = long.fromNumber(amount)
     data.writeInt32LE(longValue.low, offset)
     data.writeInt32LE(longValue.high, offset + 4)
@@ -421,25 +447,35 @@ function buildInputDataFrom(UTXOs, amountToSend) {
         }
     }
 
-    const INPUT_COUNT = count
+    let data = buildInputsDataStructure(orderedUTXOs.slice(0, count))
+
+    return {
+        inputs: data,
+        totalValueOfInputs
+    }
+}
+
+/**
+ * Construct inputs[] data structure
+ * @param {UTXO[]} UTXOs
+ * @returns {Buffer} Input data (LEN + N * UTXO record) 
+ */
+function buildInputsDataStructure(UTXOs) {
+    const INPUT_COUNT = UTXOs.length
     const INPUT_ENTRY_LENGTH = 34
 
     // construct input data
     let data = Buffer.alloc(1 + INPUT_ENTRY_LENGTH * INPUT_COUNT)
     data.writeInt16LE(INPUT_COUNT, 0)
 
-    // foreach required input build a valid entry/record
+    // foreach required input build a valid entry
     for (let i = 0; i < INPUT_COUNT; i++) {
         let offset = 1 + i * INPUT_ENTRY_LENGTH
-        const inputEntry = getInputEntryFrom(orderedUTXOs[i])
+        const inputEntry = getInputEntryFrom(UTXOs[i])
 
         data.fill(inputEntry, offset, INPUT_ENTRY_LENGTH + offset)
     }
-
-    return {
-        inputs: data,
-        totalValueOfInputs
-    }
+    return data
 }
 
 /**
@@ -527,23 +563,6 @@ function getPublicKey(privateKey, encode) {
 }
 
 /**
- * Bitwise XOR 2 arrays
- * @param {Buffer|string} a
- * @param {Buffer|string} b
- * @return {Buffer} a^b
- */
-function XOR(a, b) {
-    if (!Buffer.isBuffer(a)) a = new Buffer(a)
-    if (!Buffer.isBuffer(b)) b = new Buffer(b)
-    var res = []
-    for (var i = 0; i < a.length; i++) {
-        res.push(a[i] ^ b[i])
-    }
-
-    return new Buffer(res)
-}
-
-/**
  * Get Account from Private Key
  * @param {Buffer} privateKey - Private Key
  * @returns {Account} An Account object
@@ -563,17 +582,4 @@ function getAccountFromPrivateKey(privateKey) {
     /* get account from public key end (getAccountFromPublicKey) */
 
     return { privateKey, publicKeyEncoded, publicKeyHash, scriptHash, address }
-}
-
-/**
- * Reverse the elements in an array of type {Buffer}
- * @param {Buffer} input buffer
- * @returns {Buffer} A buffer in reversed order
- */
-function reverse(input) {
-    let result = Buffer.alloc(input.length)
-    for (let i = input.length - 1, offset = 0; i >= 0; i--, offset++) {
-        result[offset] = input[i]
-    }
-    return result
 }

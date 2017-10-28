@@ -1,7 +1,7 @@
 import { delay } from 'redux-saga'
 import { put, takeEvery, call, all, takeLatest, select, fork, take, cancel, cancelled, race } from 'redux-saga/effects'
 import { getWallet, getNetwork, getWalletGasBalance } from './selectors'
-import { getBalance, getTransactionHistory, sendAsset, getClaimAmounts, getWalletDBHeight, doClaimAllGas } from '../api/network'
+import { getBalance, getTransactionHistory, sendAsset, getClaimAmounts, getWalletDBHeight, claimAllGAS } from '../api/network'
 import { decryptWIF, generateEncryptedWIF } from '../api/crypto'
 
 import { ActionConstants as actions } from '../actions'
@@ -60,6 +60,7 @@ export function* createWalletFlow(args) {
     } catch (error) {
         console.log(error)
         yield put({ type: actions.wallet.CREATE_WALLET_ERROR, error })
+        DropDownHolder.getDropDown().alertWithType('error', 'Error', error)
     }
 }
 
@@ -219,7 +220,7 @@ function* claim(wif) {
     // https://github.com/CityOfZion/neon-js/blob/ec8ba51a4fb8dea3c9f777db002b9c2e5c8a8ad0/src/api.js#L45
     try {
         yield put({ type: actions.wallet.CLAIM_GAS_START })
-        const response = yield call(doClaimAllGas, wif)
+        const response = yield call(claimAllGAS, wif)
         if (response.result == true) {
             yield put({ type: actions.wallet.CLAIM_GAS_SUCCESS })
         } else {
@@ -230,13 +231,15 @@ function* claim(wif) {
     }
 }
 
-function* waitForTransactionToSelfToClear() {
+function* waitForTransactionToSelfToClear(previousUnspendClaim) {
     yield put({ type: actions.wallet.WAITING_FOR_TRANSACTION_TO_SELF_TO_CLEAR })
 
     while (true) {
         yield take(actions.wallet.GET_AVAILABLE_GAS_CLAIM_SUCCESS)
         let wallet = yield select(getWallet)
-        if (wallet.claimUnspend == 0) {
+
+        // testing for smaller than previous unspend amount, because while clearing we might earn new GAS. Testing for 0 is thus not a good solution
+        if (wallet.claimUnspend < previousUnspendClaim) {
             // confirmed
             yield put({ type: actions.wallet.TRANSACTION_TO_SELF_CLEARED })
             break
@@ -256,8 +259,10 @@ function* claimGASFlow() {
         yield put({ type: actions.wallet.UNSPEND_CLAIM_TO_CLEAR }) // we can just assume this based on Neo balance instead of checking with `retrieveClaimAmount`
 
         const sendToSelfParams = { assetType: 'Neo', toAddress: wallet.address, amount: wallet.neo }
+        const previousUnspend = wallet.claimUnspend
+
         yield call(sendAssetFlow, sendToSelfParams)
-        yield fork(waitForTransactionToSelfToClear)
+        yield fork(waitForTransactionToSelfToClear, previousUnspend)
 
         yield take(actions.wallet.TRANSACTION_TO_SELF_CLEARED)
     }

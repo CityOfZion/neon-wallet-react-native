@@ -1,6 +1,11 @@
 import request from './request'
-import { getAccountFromWIF, buildContractTransactionData, buildContract, signTransactionData } from '../crypto'
-import { transferTransaction, signatureData, addContract, claimTransaction } from '../crypto/to_fix'
+import {
+    getAccountFromWIF,
+    buildContractTransactionData,
+    buildClaimTransactionData,
+    buildRawTransaction,
+    signTransactionData
+} from '../crypto'
 
 export function getBalance(address) {
     var path = '/v2/address/balance/' + address
@@ -34,7 +39,7 @@ export function getClaimAmounts(address) {
     })
 }
 
-function getAssetId(assetType) {
+export function getAssetId(assetType) {
     // more info here: http://docs.neo.org/en-us/node/api/getbalance.html
     const neoId = 'c56f33fc6ecfcd0c225c4ab356fee59390af8560be0e930faebe74a6daff7c9b'
     const gasId = '602c79718b16e442de58778e148d0b1084e3b2dffd5de6b7b16cee7969282de7'
@@ -64,7 +69,7 @@ export function sendAsset(destinationAddress, WIF, assetType, amount) {
         const UTXOs = response.unspent[assetType]
         const txData = buildContractTransactionData(UTXOs, assetId, fromAccount.publicKeyEncoded, destinationAddress, amount)
         const signature = signTransactionData(txData, fromAccount.privateKey)
-        const rawTXData = buildContract(txData, signature, fromAccount.publicKeyEncoded)
+        const rawTXData = buildRawTransaction(txData, signature, fromAccount.publicKeyEncoded)
 
         return queryRPC('sendrawtransaction', [rawTXData.toString('hex')], 4)
     })
@@ -94,16 +99,18 @@ export const queryRPC = (method, params, id = 1) => {
     })
 }
 
-// TODO: refactor
-export const doClaimAllGas = fromWif => {
+export function claimAllGAS(fromWif) {
     const account = getAccountFromWIF(fromWif)
+
     var path = '/v2/address/claims/' + account.address
     return request(path).then(response => {
         const claims = response['claims']
         const totalClaim = response['total_claim']
-        const txData = claimTransaction(claims, account.publicKeyEncoded, account.address, totalClaim)
-        const sign = signatureData(txData, account.privateKey)
-        const txRawData = addContract(txData, sign, account.publicKeyEncoded)
-        return queryRPC('sendrawtransaction', [txRawData], 2)
+
+        const txData = buildClaimTransactionData(claims, totalClaim, account.publicKeyEncoded)
+        console.log(txData.toString('hex'))
+        const signature = signTransactionData(txData, account.privateKey)
+        const rawTXData = buildRawTransaction(txData, signature, account.publicKeyEncoded)
+        return queryRPC('sendrawtransaction', [rawTXData.toString('hex')], 2)
     })
 }
