@@ -10,7 +10,6 @@ export function getMarketPriceUSD() {
             }
         })
         .then(response => {
-            console.log(response)
             return response.result.Last
         })
         .catch(error => {
