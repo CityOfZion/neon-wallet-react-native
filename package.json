@@ -37,6 +37,7 @@
     "wif": "^2.0.6"
   },
   "devDependencies": {
+    "babel-core": "^6.26.0",
     "babel-jest": "21.0.2",
     "babel-preset-react-native": "4.0.0",
     "jest": "^21.1.0",
