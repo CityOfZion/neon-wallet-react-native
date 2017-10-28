@@ -137,7 +137,7 @@ export function encryptWIF(wif, passphrase) {
             .slice(0, 8)
         const derived = Buffer.from(
             scrypt(
-                Buffer.from(passphrase, 'utf8'),
+                Buffer.from(passphrase.normalize('NFC'), 'utf8'),
                 Buffer.from(addressHash, 'hex'),
                 SCRYPT_PARAMS.ITERATIONS,
                 SCRYPT_PARAMS.BLOCKSIZE,
