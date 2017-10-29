@@ -18,7 +18,11 @@ export function* rootWalletSaga() {
  *
  */
 export function* watchCreateWallet() {
-    yield takeEvery(actions.wallet.CREATE_WALLET, createWalletFlow)
+    // expanded to make testable with redux-saga-mock
+    while (true) {
+        const params = yield take(actions.wallet.CREATE_WALLET)
+        yield fork(createWalletFlow, params)
+    }
 }
 
 function* watchLoginWallet() {
@@ -48,17 +52,14 @@ function* watchClaimGAS() {
  */
 export function* createWalletFlow(args) {
     const { passphrase, wif } = args
+
     try {
         yield put({ type: actions.wallet.CREATE_WALLET_START })
         yield call(delay, 1000) // to give the UI-thread time to show the 'generating view'
 
         const result = yield call(generateEncryptedWIF, passphrase, wif) // too computational heavy. Blocks Animations.
-        // Breaking it up in the individual parts with delays didn't help
-        // possibly using requestAnimationframe(()=>{call funcs here}) could work. try later
-
         yield put({ type: actions.wallet.CREATE_WALLET_SUCCESS, data: result })
     } catch (error) {
-        console.log(error)
         yield put({ type: actions.wallet.CREATE_WALLET_ERROR, error })
         DropDownHolder.getDropDown().alertWithType('error', 'Error', error)
     }

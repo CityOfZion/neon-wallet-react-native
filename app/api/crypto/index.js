@@ -85,7 +85,7 @@ export function getWIFFromPrivateKey(privateKey) {
 /**
  * Get private key from WIF.
  * @param {string} wif (Wallet Import Format)
- * @return {Buffer|undefined} Private key if valid or undefined if invalid WIF format
+ * @return {Buffer|error} Private key if valid or throws an error if the WIF format is invalid
  */
 export function getPrivateKeyFromWIF(wif) {
     let privateKey = undefined
@@ -103,6 +103,8 @@ export function getPrivateKeyFromWIF(wif) {
 
     if (data.length == EXPECTED_LENGTH && data[0] == BITCOIN_MAINNET_FLAG && data[33] == COMPRESSED_TRUE_FLAG) {
         privateKey = data.slice(PRIVATE_KEY_START, PRIVATE_KEY_START + PRIVATE_KEY_LENGTH)
+    } else {
+        throw new Error('Invalid WIF')
     }
     return privateKey
 }

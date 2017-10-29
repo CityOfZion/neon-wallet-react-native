@@ -20,7 +20,7 @@ const middleware = () => {
     return applyMiddleware(sagaMiddleWare, loggerMiddleware)
 }
 
-let initialState = {
+export let initialState = {
     wallet: {
         wif: null,
         address: null,
