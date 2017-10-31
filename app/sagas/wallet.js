@@ -25,7 +25,7 @@ export function* watchCreateWallet() {
     }
 }
 
-function* watchLoginWallet() {
+export function* watchLoginWallet() {
     while (true) {
         const params = yield take(actions.wallet.LOGIN)
         yield fork(walletUseFlow, params)
@@ -72,7 +72,7 @@ function* decryptWalletKeys(encryptedKey, passphrase) {
         const plainKey = yield call(decryptWIF, encryptedKey, passphrase)
         yield put({ type: actions.wallet.LOGIN_SUCCESS, plainKey })
     } catch (error) {
-        yield put({ type: actions.wallet.LOGIN_ERROR, error: 'Wrong passphrase' })
+        yield put({ type: actions.wallet.LOGIN_ERROR, error })
         DropDownHolder.getDropDown().alertWithType('error', 'Error', 'Wrong passphrase')
     }
 }
@@ -118,7 +118,7 @@ function* retrieveClaimAmount(address) {
     }
 }
 
-function* retrieveData() {
+export function* retrieveData() {
     const BLOCKCHAIN_UPDATE_INTERVAL = 10000 //15000
     const wallet = yield select(getWallet)
     const network = yield select(getNetwork)
@@ -138,7 +138,7 @@ function* retrieveData() {
     yield call(delay, BLOCKCHAIN_UPDATE_INTERVAL)
 }
 
-function* backgroundSyncData() {
+export function* backgroundSyncData() {
     try {
         yield put({ type: 'BACKGROUND_SYNC_STARTING' })
         while (true) {
@@ -155,7 +155,7 @@ function* backgroundSyncData() {
     }
 }
 
-function* walletUseFlow(args) {
+export function* walletUseFlow(args) {
     const { key, passphrase, keyIsEncrypted } = args
 
     if (keyIsEncrypted) {
@@ -171,6 +171,7 @@ function* walletUseFlow(args) {
     // cancel when loging out of wallet
     yield take(actions.wallet.LOGOUT)
     yield cancel(bgSync)
+    yield put({ type: 'test_cancel' })
 }
 
 function* sendAssetFlow(args) {

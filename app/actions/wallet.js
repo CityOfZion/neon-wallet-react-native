@@ -98,7 +98,7 @@ export function login(passphrase, encryptedKey) {
         keyIsEncrypted: true
     }
 }
-
+// TODO: should rename to unencryptedWIF() as it's tehnically not really the private key but it's unencrypted encoded form
 export function loginWithPrivateKey(key) {
     return {
         type: LOGIN,

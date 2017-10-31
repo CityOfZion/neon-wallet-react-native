@@ -1,7 +1,7 @@
 import { call, take, put } from 'redux-saga/effects'
 import SagaTester from 'redux-saga-tester'
 import { mockSaga } from 'redux-saga-mock'
-import { watchCreateWallet, createWalletFlow } from '../app/sagas/wallet'
+import { watchCreateWallet, createWalletFlow, watchLoginWallet, walletUseFlow, backgroundSyncData, retrieveData } from '../app/sagas/wallet'
 import { ActionConstants as actionMsg } from '../app/actions'
 import { ActionCreators as actions } from '../app/actions'
 import { generateEncryptedWIF } from '../app/api/crypto'
@@ -37,7 +37,7 @@ describe('wallet creation', () => {
         })
     })
 
-    describe('create flow', () => {
+    describe('flow', () => {
         let sagaTester
         let testSaga
 
@@ -47,8 +47,6 @@ describe('wallet creation', () => {
                 reducers: reducer
             })
             testSaga = mockSaga(watchCreateWallet)
-
-            return { sagaTester, testSaga }
         })
 
         it('should generate a valid encrypted WIF from only a passphrase', async () => {
@@ -91,5 +89,167 @@ describe('wallet creation', () => {
             expect(sagaTester.numCalled(actionMsg.wallet.CREATE_WALLET_ERROR)).toEqual(1)
             expect(sagaTester.getLatestCalledAction().error.message).toBe('Invalid WIF')
         })
+    })
+})
+
+describe('wallet use', () => {
+    describe('watcher', () => {
+        let sagaTester
+        let testSaga
+
+        beforeEach(() => {
+            sagaTester = new SagaTester({
+                initialState: initialState,
+                reducers: reducer
+            })
+            testSaga = mockSaga(watchLoginWallet)
+        })
+
+        it('should accept just 1 login at a time', () => {
+            // case specific setup
+            testSaga.stubFork(walletUseFlow, () => {
+                sagaTester.dispatch({ type: 'USE_FLOW_STARTED' })
+            })
+            sagaTester.start(testSaga)
+
+            // interact
+            sagaTester.dispatch({ type: actionMsg.wallet.LOGIN })
+            sagaTester.dispatch({ type: actionMsg.wallet.LOGIN })
+            expect(sagaTester.numCalled('USE_FLOW_STARTED')).toEqual(1)
+        })
+
+        it('should allow another login after a failed login attempt', async () => {
+            // case specific setup
+            testSaga.stubFork(walletUseFlow, () => {
+                sagaTester.dispatch({ type: 'USE_FLOW_STARTED' })
+                sagaTester.dispatch({ type: actionMsg.wallet.LOGIN_ERROR })
+            })
+            sagaTester.start(testSaga)
+
+            // interact
+            sagaTester.dispatch({ type: actionMsg.wallet.LOGIN })
+            await sagaTester.waitFor(actionMsg.wallet.LOGIN_ERROR)
+            sagaTester.dispatch({ type: actionMsg.wallet.LOGIN })
+            expect(sagaTester.numCalled('USE_FLOW_STARTED')).toEqual(2)
+        })
+
+        it('should allow logging in after having logged out', async () => {
+            // case specific setup
+            testSaga.stubFork(walletUseFlow, () => {
+                sagaTester.dispatch({ type: 'USE_FLOW_STARTED' })
+                sagaTester.dispatch({ type: actionMsg.wallet.LOGOUT })
+            })
+            sagaTester.start(testSaga)
+
+            // interact
+            sagaTester.dispatch({ type: actionMsg.wallet.LOGIN })
+            await sagaTester.waitFor(actionMsg.wallet.LOGOUT)
+            sagaTester.dispatch({ type: actionMsg.wallet.LOGIN })
+            expect(sagaTester.numCalled('USE_FLOW_STARTED')).toEqual(2)
+        })
+
+        it('should reset the store state when logging out', async () => {
+            testSaga.stubFork(walletUseFlow, () => {
+                // set dummy store values
+                let state = sagaTester.getState()
+                state.claim.unspendToClear = true
+                state.wallet.wif = unencryptedWIF
+                state.network.blockHeight.TestNet = 123
+                sagaTester.setState(state)
+
+                sagaTester.dispatch({ type: actionMsg.wallet.LOGOUT })
+            })
+            sagaTester.start(testSaga)
+
+            // interact
+            sagaTester.dispatch({ type: actionMsg.wallet.LOGIN })
+            await sagaTester.waitFor(actionMsg.wallet.RESET_STATE)
+            let newState = sagaTester.getState()
+            expect(newState.claim.unspendToClear).toBe(false)
+            expect(newState.wallet.wif).toBe(null)
+            expect(newState.network.blockHeight.TestNet).toBe(0)
+        })
+    })
+
+    describe('flow', () => {
+        let sagaTester
+        let testSaga
+
+        beforeEach(() => {
+            sagaTester = new SagaTester({
+                initialState: initialState,
+                reducers: reducer
+            })
+            testSaga = mockSaga(watchLoginWallet)
+        })
+
+        it('should first decrypt the wallet key if an encrypted key is provided', async () => {
+            testSaga.stubFork(backgroundSyncData, async () => {
+                sagaTester.dispatch({ type: 'TEST_BG_TASK_STARTED' })
+            })
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.login(passphrase, encryptedWIF))
+            await sagaTester.waitFor(actionMsg.wallet.LOGIN_SUCCESS)
+
+            // verify store is filled correctly
+            const walletState = sagaTester.getState().wallet
+            expect(walletState.wif).toHaveLength(52)
+            expect(walletState.address).toHaveLength(34)
+            expect(walletState.wif).toEqual(unencryptedWIF)
+            expect(walletState.loggedIn).toBe(true)
+        })
+
+        it('should throw an error if the passphrase is wrong', async () => {
+            // case specific setup
+            // 'mock' our DropDownHolder to avoid reference errors.
+            let placeHolder = {}
+            placeHolder.alertWithType = () => {}
+            DropDownHolder.setDropDown(placeHolder)
+
+            testSaga.stubFork(backgroundSyncData, async () => {
+                sagaTester.dispatch({ type: 'TEST_BG_TASK_STARTED' })
+            })
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.login('fakepassphrase', encryptedWIF))
+            await sagaTester.waitFor(actionMsg.wallet.LOGIN_ERROR)
+            expect(sagaTester.getLatestCalledAction().error.message).toBe('Wrong passphrase!')
+        })
+
+        it('should start a background task fetching data from the network if logged in successfully', async () => {
+            testSaga.stubFork(backgroundSyncData, async () => {
+                sagaTester.dispatch({ type: 'TEST_BG_TASK_STARTED' })
+            })
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor(actionMsg.wallet.LOGIN_SUCCESS)
+
+            expect(sagaTester.numCalled('TEST_BG_TASK_STARTED')).toBe(1)
+        })
+
+        // TODO: `cancel(<forked process>)` doesn't seem to register `put` calls in the finally{} block
+        // the actual redux-log's shows that the implementation is working
+        // need to figure out how to test this
+        // it('should cancel the background task when logging out', async () => {
+        //     // stubCall in a `yield race` is not working
+        //     testSaga.stubCall(retrieveData, () => {
+        //         setTimeout(function() {
+        //             // console.log('retrieve called')
+        //         }, 1000)
+        //     })
+
+        //     sagaTester.start(testSaga)
+        //     sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+        //     await sagaTester.waitFor('BACKGROUND_SYNC_STARTING')
+        //     sagaTester.dispatch({ type: actionMsg.wallet.LOGOUT })
+        //     sagaTester.waitFor('test_cancel', true)
+        //     // console.log(sagaTester.getCalledActions())
+        //     // console.log(testSaga.query().effects.slice(-10))
+
+        //     let TODO = true
+        //     expect(TODO).toEqual(false)
+        // })
     })
 })

@@ -209,7 +209,7 @@ export function decryptWIF(encryptedWIF, passphrase) {
         .toString()
         .slice(0, 8)
     const addressHashHex = addressHash.toString('hex')
-    if (addressHashHex !== newAddressHash) throw new Error('Wrong Password!')
+    if (addressHashHex !== newAddressHash) throw new Error('Wrong passphrase!')
     return getWIFFromPrivateKey(privateKey)
 }
 
