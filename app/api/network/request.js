@@ -1,16 +1,18 @@
-// import { getStore } from '../../store'
-
-// let store = getStore()
-// store.subscribe(listener)
+import store from '../../store'
 
 let rpcUrl = null
 
 function listener() {
-    // let network = store.getState().network.net
+    let network = store.getState().network.net
     rpcUrl = network === 'MainNet' ? 'http://api.wallet.cityofzion.io' : 'http://testnet-api.wallet.cityofzion.io'
 }
 
 const request = function(url, options = {}, ignore_base_url = false) {
+    if (rpcUrl == null) {
+        store.subscribe(listener)
+        listener()
+    }
+
     const onSuccess = function(response) {
         // console.debug(('request success!', response))
         if (response.status >= 200 && response.status < 300) {
@@ -32,7 +34,7 @@ const request = function(url, options = {}, ignore_base_url = false) {
     if (ignore_base_url) {
         base_url = ''
     } else {
-        base_url = 'http://testnet-api.wallet.cityofzion.io' //rpcUrl
+        base_url = rpcUrl
     }
 
     init = {
