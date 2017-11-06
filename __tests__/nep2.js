@@ -17,5 +17,5 @@ it('should decrypt a WIF correctly', () => {
 it('should notify about an incorrect passphrase when failing to decrypt a WIF', () => {
     expect(function() {
         decryptWIF(encryptedWIF, 'wrongPassphrase')
-    }).toThrowError('Wrong Password!')
+    }).toThrowError('Wrong passphrase!')
 })
