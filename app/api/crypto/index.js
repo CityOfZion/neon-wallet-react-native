@@ -127,7 +127,7 @@ export function getAccountFromWIF(wif) {
 /**
  * Encrypts a WIF using a given keyphrase under NEP-2 Standard.
  * @param {String} wif - WIF key to encrypt (52 chars long).
- * @param {string} passphrase - The password. Will be encoded as UTF-8 + NFC normalized.
+ * @param {string} passphrase - The password will be encoded as UTF-8 + NFC normalized.
  * @returns {string|undefined} If successful the encrypted key in Base58 (Case sensitive) otherwise undefined
  */
 export function encryptWIF(wif, passphrase) {
@@ -170,7 +170,7 @@ export function encryptWIF(wif, passphrase) {
 /**
  * Decrypt a WIF using a given passphrase under NEP-2 Standard.
  * @param {string} encryptedWIF - existing WIF to decrypt (52 chars long).
- * @param {String} passphrase - The password. Will be encoded as UTF-8.
+ * @param {String} passphrase - The password will be encoded as UTF-8.
  * @returns {string|throw{Error}} If successful the encrypted key in Base58 (Case sensitive) or throws an Error if password wrong
  */
 export function decryptWIF(encryptedWIF, passphrase) {
@@ -555,7 +555,7 @@ function generatePrivateKey() {
 /**
  * Get public key from private key.
  * @param {Buffer} privateKey - Private Key.
- * @param {boolean} encode - If the returned public key should be encrypted. Defaults to true
+ * @param {boolean} encode - If the returned public key should be encoded. Defaults to true
  * @return {Buffer} Buffer containing the public key.
  */
 function getPublicKey(privateKey, encode) {
