@@ -57,7 +57,7 @@ export let initialState = {
     }
 }
 
-const store = createStore(reducer, initialState, middleware())
+export const store = createStore(reducer, initialState, middleware())
 // https://github.com/rt2zz/redux-persist/issues/126   store overwritting might be solved like this
 // const store = createStore(reducer, initialState, compose(middleware(), autoRehydrate()))
 

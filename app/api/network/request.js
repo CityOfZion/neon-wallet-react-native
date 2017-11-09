@@ -1,15 +1,15 @@
-import store from '../../store'
-
 let rpcUrl = null
+let my_store = null
 
 function listener() {
-    let network = store.getState().network.net
+    let network = my_store.getState().network.net
     rpcUrl = network === 'MainNet' ? 'http://api.wallet.cityofzion.io' : 'http://testnet-api.wallet.cityofzion.io'
 }
 
 const request = function(url, options = {}, ignore_base_url = false) {
-    if (rpcUrl == null) {
-        store.subscribe(listener)
+    if (my_store == null) {
+        my_store = require('../../store').store
+        my_store.subscribe(listener)
         listener()
     }
 
