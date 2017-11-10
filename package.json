@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node node_modules/react-native/local-cli/cli.js start",
     "postinstall": "rn-nodeify --install buffer,stream,child_process --hack && npm install --save node-libs-react-native",
-    "test": "jest",
+    "test": "jest && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "prepare": "patch-package"
   },
   "dependencies": {
@@ -40,6 +40,7 @@
     "babel-core": "^6.26.0",
     "babel-jest": "21.0.2",
     "babel-preset-react-native": "4.0.0",
+    "coveralls": "^3.0.0",
     "isomorphic-fetch": "^2.2.1",
     "jest": "^21.1.0",
     "nock": "^9.0.27",
@@ -54,10 +55,17 @@
       "node_modules/(?!(jest-)?react-native|react-clone-referenced-element|react-navigation)"
     ],
     "globals": {
-       "__SAGA__UNDER_JEST__": true
+      "__SAGA__UNDER_JEST__": true
     },
-    "coverageReporters":["html"],
-    "collectCoverageFrom": ["app/actions/**/*.js", "app/sagas/**/*.js", "app/reducers/**/*.js"],
+    "coverageReporters": [
+      "html",
+      "lcov"
+    ],
+    "collectCoverageFrom": [
+      "app/actions/**/*.js",
+      "app/sagas/**/*.js",
+      "app/reducers/**/*.js"
+    ],
     "collectCoverage": true
   },
   "react-native": {

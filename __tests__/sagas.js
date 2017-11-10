@@ -8,6 +8,8 @@ import { generateEncryptedWIF } from '../app/api/crypto'
 import reducer from '../app/reducers'
 import { initialState } from '../app/store'
 import { DropDownHolder } from '../app/utils/DropDownHolder'
+import nock from 'nock'
+import 'isomorphic-fetch'
 
 // use official test vectors from https://github.com/neo-project/proposals/blob/master/nep-2.mediawiki#test-vectors
 const unencryptedWIF = 'L44B5gGEpqEDRS9vVPz7QT35jcBG2r3CZwSwQ4fCewXAhAhqGVpP'
