@@ -8,3 +8,6 @@ cache:
     - "node_modules"
 
 script: npm install
+
+after_success:
+  - npm run test
