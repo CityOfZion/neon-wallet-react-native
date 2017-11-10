@@ -119,9 +119,13 @@ function* retrieveClaimAmount(address) {
 }
 
 export function* retrieveData() {
-    const BLOCKCHAIN_UPDATE_INTERVAL = 10000 //15000
+    let BLOCKCHAIN_UPDATE_INTERVAL = 10000 //15000
     const wallet = yield select(getWallet)
     const network = yield select(getNetwork)
+
+    if (global.__SAGA__UNDER_JEST__) {
+        BLOCKCHAIN_UPDATE_INTERVAL = 1000
+    }
 
     yield put({ type: actions.network.UPDATE_BLOCK_HEIGHT })
     const blockHeight = yield call(getWalletDBHeight)
@@ -171,7 +175,11 @@ export function* walletUseFlow(args) {
     // cancel when loging out of wallet
     yield take(actions.wallet.LOGOUT)
     yield cancel(bgSync)
-    yield put({ type: 'test_cancel' })
+
+    // because of https://github.com/wix/redux-saga-tester/issues/38
+    if (global.__SAGA__UNDER_JEST__) {
+        yield put({ type: 'JEST_BG_TASK_CANCELLED' })
+    }
 }
 
 function* sendAssetFlow(args) {

@@ -229,27 +229,110 @@ describe('wallet use', () => {
             expect(sagaTester.numCalled('TEST_BG_TASK_STARTED')).toBe(1)
         })
 
-        // TODO: `cancel(<forked process>)` doesn't seem to register `put` calls in the finally{} block
-        // the actual redux-log's shows that the implementation is working
-        // need to figure out how to test this
-        // it('should cancel the background task when logging out', async () => {
-        //     // stubCall in a `yield race` is not working
-        //     testSaga.stubCall(retrieveData, () => {
-        //         setTimeout(function() {
-        //             // console.log('retrieve called')
-        //         }, 1000)
-        //     })
+        it('should cancel the background task when logging out', async () => {
+            function* blockHeightGenerator() {
+                var index = 1;
+                while(true)
+                  yield index++;
+              }
 
-        //     sagaTester.start(testSaga)
-        //     sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
-        //     await sagaTester.waitFor('BACKGROUND_SYNC_STARTING')
-        //     sagaTester.dispatch({ type: actionMsg.wallet.LOGOUT })
-        //     sagaTester.waitFor('test_cancel', true)
-        //     // console.log(sagaTester.getCalledActions())
-        //     // console.log(testSaga.query().effects.slice(-10))
+            var blockGen = blockHeightGenerator()
 
-        //     let TODO = true
-        //     expect(TODO).toEqual(false)
-        // })
+            nock('http://testnet-api.wallet.cityofzion.io')
+                .get('/v2/block/height')
+                .reply(200, {
+                    block_height: blockGen.next().value,
+                    net: 'TestNet'
+                })
+
+            nock('http://testnet-api.wallet.cityofzion.io')
+                .get('/v2/block/height')
+                .reply(200, {
+                    block_height: blockGen.next().value,
+                    net: 'TestNet'
+                })
+
+            nock('http://testnet-api.wallet.cityofzion.io')
+                .get('/v2/block/height')
+                .reply(200, {
+                    block_height: blockGen.next().value,
+                    net: 'TestNet'
+                })
+
+            nock('http://testnet-api.wallet.cityofzion.io')
+                .persist()
+                .filteringPath(function(path) {
+                    if (path.includes('/v2/address/balance/')) {
+                        return '/v2/address/balance/'
+                    } else {
+                        return path
+                    }
+                })
+                .get('/v2/address/balance/')
+                .reply(200, {
+                    GAS: {
+                        balance: 0,
+                        unspent: []
+                    },
+                    NEO: {
+                        balance: 0,
+                        unspent: []
+                    },
+                    address: 'AStZHy8E6StCqYQbzMqi4poH7YNDHQKxvt',
+                    net: 'TestNet'
+                })
+
+            nock('http://testnet-api.wallet.cityofzion.io')
+                .persist()
+                .filteringPath(function(path) {
+                    if (path.includes('/v2/address/history/')) {
+                        return '/v2/address/history/'
+                    } else {
+                        return path
+                    }
+                })
+                .get('/v2/address/history/')
+                .reply(200, {
+                    address: 'AStZHy8E6StCqYQbzMqi4poH7YNDHQKxvt',
+                    history: [],
+                    name: 'transaction_history',
+                    net: 'TestNet'
+                })
+
+            nock('http://testnet-api.wallet.cityofzion.io')
+                .persist()
+                .filteringPath(function(path) {
+                    if (path.includes('/v2/address/claims/')) {
+                        return '/v2/address/claims/'
+                    } else {
+                        return path
+                    }
+                })
+                .get('/v2/address/claims/')
+                .reply(200, {
+                    address: 'AStZHy8E6StCqYQbzMqi4poH7YNDHQKxvt',
+                    claims: [],
+                    net: 'TestNet',
+                    total_claim: 0,
+                    total_unspent_claim: 0
+                })
+
+            nock('https://bittrex.com')
+                .persist()
+                .get('/api/v1.1/public/getticker?market=USDT-NEO')
+                .reply(200, {
+                    success: true,
+                    message: '',
+                    result: { Bid: 1337.00000001, Ask: 1337.00000002, Last: 1337.00000003 }
+                })
+
+            let task = sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor(actionMsg.network.UPDATE_BLOCK_HEIGHT, true)
+            await sagaTester.waitFor(actionMsg.network.UPDATE_BLOCK_HEIGHT, true)
+            sagaTester.dispatch({type:actionMsg.wallet.LOGOUT})
+
+            expect(testSaga.query().putAction('JEST_BG_TASK_CANCELLED').isPresent).toBe(true)
+        })
     })
 })
