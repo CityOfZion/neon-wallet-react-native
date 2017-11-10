@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/ixje/neon-wallet-react-native.svg?branch=master)](https://travis-ci.org/ixje/neon-wallet-react-native)
+
 ### About
 A NEO light-wallet for Android and iOS build using react-native. It's aim is to closely resemble the look and feel of [Neon-wallet](https://github.com/CityOfZion/neon-wallet) so you'll feel right at home if you used that before or use it on the side.
 
