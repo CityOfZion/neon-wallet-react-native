@@ -25,7 +25,7 @@
     "react-native-indicators": "^0.10.0",
     "react-native-modal-dropdown": "^0.5.0",
     "react-native-vector-icons": "^4.4.0",
-    "react-navigation": "^1.0.0-beta.11",
+    "react-navigation": "1.0.0-beta.13",
     "react-redux": "^5.0.6",
     "readable-stream": "^1.0.33",
     "redux": "^3.7.2",

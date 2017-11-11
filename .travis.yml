@@ -1,7 +1,10 @@
 language: node_js
 
 node_js:
-  - "6"
+  - "7"
+
+before_install:
+  - npm i -g npm@5.4.2
 
 cache:
   directories:
