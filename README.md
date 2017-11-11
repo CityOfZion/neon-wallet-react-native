@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/ixje/neon-wallet-react-native.svg?branch=master)](https://travis-ci.org/ixje/neon-wallet-react-native) [![Coverage Status](https://coveralls.io/repos/github/ixje/neon-wallet-react-native/badge.svg?branch=master)](https://coveralls.io/github/ixje/neon-wallet-react-native?branch=master)
+[![Build Status](https://travis-ci.org/CityOfZion/neon-wallet-react-native.svg?branch=master)](https://travis-ci.org/CityOfZion/neon-wallet-react-native) [![Coverage Status](https://coveralls.io/repos/github/CityOfZion/neon-wallet-react-native/badge.svg?branch=master)](https://coveralls.io/github/CityOfZion/neon-wallet-react-native?branch=master)
 
 ### About
 A NEO light-wallet for Android and iOS build using react-native. It's aim is to closely resemble the look and feel of [Neon-wallet](https://github.com/CityOfZion/neon-wallet) so you'll feel right at home if you used that before or use it on the side.
