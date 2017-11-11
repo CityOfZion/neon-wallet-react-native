@@ -17,6 +17,11 @@ const passphrase = 'TestingOneTwoThree'
 const encryptedWIF = '6PYVPVe1fQznphjbUxXP9KZJqPMVnVwCx5s5pr5axRJ8uHkMtZg97eT5kL'
 const publicAddress = 'AStZHy8E6StCqYQbzMqi4poH7YNDHQKxvt'
 
+function deepClone(obj1) {
+    return JSON.parse(JSON.stringify(obj1))
+}
+
+
 describe('wallet creation', () => {
     describe('watcher', () => {
         it('should accept any create action', () => {
@@ -101,7 +106,7 @@ describe('wallet use', () => {
 
         beforeEach(() => {
             sagaTester = new SagaTester({
-                initialState: initialState,
+                initialState: deepClone(initialState),
                 reducers: reducer
             })
             testSaga = mockSaga(watchLoginWallet)
@@ -232,32 +237,24 @@ describe('wallet use', () => {
         })
 
         it('should cancel the background task when logging out', async () => {
-            function* blockHeightGenerator() {
-                var index = 1;
-                while(true)
-                  yield index++;
-              }
-
-            var blockGen = blockHeightGenerator()
-
             nock('http://testnet-api.wallet.cityofzion.io')
                 .get('/v2/block/height')
                 .reply(200, {
-                    block_height: blockGen.next().value,
+                    block_height: 1,
                     net: 'TestNet'
                 })
 
             nock('http://testnet-api.wallet.cityofzion.io')
                 .get('/v2/block/height')
                 .reply(200, {
-                    block_height: blockGen.next().value,
+                    block_height: 2,
                     net: 'TestNet'
                 })
 
             nock('http://testnet-api.wallet.cityofzion.io')
                 .get('/v2/block/height')
                 .reply(200, {
-                    block_height: blockGen.next().value,
+                    block_height: 3,
                     net: 'TestNet'
                 })
 
