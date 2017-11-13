@@ -1,6 +1,9 @@
 import { call, take, put } from 'redux-saga/effects'
 import SagaTester from 'redux-saga-tester'
 import { mockSaga } from 'redux-saga-mock'
+import nock from 'nock'
+import 'isomorphic-fetch'
+
 import { watchCreateWallet, createWalletFlow, watchLoginWallet, walletUseFlow, backgroundSyncData, retrieveData } from '../app/sagas/wallet'
 import { ActionConstants as actionMsg } from '../app/actions'
 import { ActionCreators as actions } from '../app/actions'
@@ -8,8 +11,7 @@ import { generateEncryptedWIF } from '../app/api/crypto'
 import reducer from '../app/reducers'
 import { initialState } from '../app/store'
 import { DropDownHolder } from '../app/utils/DropDownHolder'
-import nock from 'nock'
-import 'isomorphic-fetch'
+import { mockClaims, mockGetBalance, mockGetDBHeight, mockGetHistory, mockTicker } from './helpers'
 
 // use official test vectors from https://github.com/neo-project/proposals/blob/master/nep-2.mediawiki#test-vectors
 const unencryptedWIF = 'L44B5gGEpqEDRS9vVPz7QT35jcBG2r3CZwSwQ4fCewXAhAhqGVpP'
@@ -21,6 +23,11 @@ function deepClone(obj1) {
     return JSON.parse(JSON.stringify(obj1))
 }
 
+SagaTester.prototype.findAction = function(actionMsgToFind) {
+    return this.getCalledActions().find(val => {
+        return val.type === actionMsgToFind
+    })
+}
 
 describe('wallet creation', () => {
     describe('watcher', () => {
@@ -188,6 +195,7 @@ describe('wallet use', () => {
                 reducers: reducer
             })
             testSaga = mockSaga(watchLoginWallet)
+            nock.cleanAll()
         })
 
         it('should first decrypt the wallet key if an encrypted key is provided', async () => {
@@ -237,101 +245,252 @@ describe('wallet use', () => {
         })
 
         it('should cancel the background task when logging out', async () => {
-            nock('http://testnet-api.wallet.cityofzion.io')
-                .get('/v2/block/height')
-                .reply(200, {
-                    block_height: 1,
-                    net: 'TestNet'
-                })
-
-            nock('http://testnet-api.wallet.cityofzion.io')
-                .get('/v2/block/height')
-                .reply(200, {
-                    block_height: 2,
-                    net: 'TestNet'
-                })
-
-            nock('http://testnet-api.wallet.cityofzion.io')
-                .get('/v2/block/height')
-                .reply(200, {
-                    block_height: 3,
-                    net: 'TestNet'
-                })
-
-            nock('http://testnet-api.wallet.cityofzion.io')
-                .persist()
-                .filteringPath(function(path) {
-                    if (path.includes('/v2/address/balance/')) {
-                        return '/v2/address/balance/'
-                    } else {
-                        return path
-                    }
-                })
-                .get('/v2/address/balance/')
-                .reply(200, {
-                    GAS: {
-                        balance: 0,
-                        unspent: []
-                    },
-                    NEO: {
-                        balance: 0,
-                        unspent: []
-                    },
-                    address: 'AStZHy8E6StCqYQbzMqi4poH7YNDHQKxvt',
-                    net: 'TestNet'
-                })
-
-            nock('http://testnet-api.wallet.cityofzion.io')
-                .persist()
-                .filteringPath(function(path) {
-                    if (path.includes('/v2/address/history/')) {
-                        return '/v2/address/history/'
-                    } else {
-                        return path
-                    }
-                })
-                .get('/v2/address/history/')
-                .reply(200, {
-                    address: 'AStZHy8E6StCqYQbzMqi4poH7YNDHQKxvt',
-                    history: [],
-                    name: 'transaction_history',
-                    net: 'TestNet'
-                })
-
-            nock('http://testnet-api.wallet.cityofzion.io')
-                .persist()
-                .filteringPath(function(path) {
-                    if (path.includes('/v2/address/claims/')) {
-                        return '/v2/address/claims/'
-                    } else {
-                        return path
-                    }
-                })
-                .get('/v2/address/claims/')
-                .reply(200, {
-                    address: 'AStZHy8E6StCqYQbzMqi4poH7YNDHQKxvt',
-                    claims: [],
-                    net: 'TestNet',
-                    total_claim: 0,
-                    total_unspent_claim: 0
-                })
-
-            nock('https://bittrex.com')
-                .persist()
-                .get('/api/v1.1/public/getticker?market=USDT-NEO')
-                .reply(200, {
-                    success: true,
-                    message: '',
-                    result: { Bid: 1337.00000001, Ask: 1337.00000002, Last: 1337.00000003 }
-                })
+            mockGetDBHeight(1)
+            mockGetDBHeight(2)
+            mockGetDBHeight(3)
+            mockGetBalance(0, 0)
+            mockGetHistory([])
+            mockClaims([])
+            mockTicker(1337, 1337.02, 1337.01)
 
             let task = sagaTester.start(testSaga)
             sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
-            await sagaTester.waitFor(actionMsg.network.UPDATE_BLOCK_HEIGHT, true)
-            await sagaTester.waitFor(actionMsg.network.UPDATE_BLOCK_HEIGHT, true)
-            sagaTester.dispatch({type:actionMsg.wallet.LOGOUT})
+            await sagaTester.waitFor(actionMsg.network.GET_BLOCK_HEIGHT)
+            sagaTester.dispatch({ type: actionMsg.wallet.LOGOUT })
 
             expect(testSaga.query().putAction('JEST_BG_TASK_CANCELLED').isPresent).toBe(true)
+        })
+
+        it('should catch GET_BLOCK_HEIGHT network retrieval errors', async () => {
+            mockGetDBHeight().reply(400)
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.network.GET_BLOCK_HEIGHT_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.network.GET_BLOCK_HEIGHT_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Bad Request')
+        })
+
+        it('should catch GET_BLOCK_HEIGHT malformed return data errors', async () => {
+            mockGetDBHeight().reply(200, {})
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.network.GET_BLOCK_HEIGHT_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.network.GET_BLOCK_HEIGHT_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Return data malformed')
+        })
+
+        it('should catch GET_BALANCE network retrieval errors', async () => {
+            mockGetDBHeight(1)
+            mockGetHistory([])
+            mockClaims([])
+            mockTicker(1337, 1337.2, 1337.1)
+            mockGetBalance().reply(400)
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_BALANCE_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_BALANCE_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Bad Request')
+        })
+
+        it('should catch GET_BALANCE malformed return data errors - no missing NEO/GAS keys allowed', async () => {
+            mockGetDBHeight(1)
+            mockGetHistory([])
+            mockClaims([])
+            mockTicker(1337, 1337.2, 1337.1)
+            mockGetBalance().reply(200, {})
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_BALANCE_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_BALANCE_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Return data malformed')
+        })
+
+        it('should catch GET_BALANCE malformed return data errors - no undefined balance allowed', async () => {
+            mockGetDBHeight(1)
+            mockGetBalance().reply(200, { NEO: {}, GAS: {} })
+            mockGetHistory([])
+            mockClaims([])
+            mockTicker(1337, 1337.2, 1337.1)
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_BALANCE_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_BALANCE_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Return data malformed')
+        })
+
+        it('should catch GET_MARKET_PRICE network retrieval errors', async () => {
+            mockGetDBHeight(1)
+            mockGetHistory([])
+            mockClaims([])
+            mockGetBalance(50, 50)
+            mockTicker().reply(400)
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_MARKET_PRICE_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_MARKET_PRICE_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Bad Request')
+        })
+
+        it('should catch GET_MARKET_PRICE malformed return data errors - expected keys do not exist', async () => {
+            mockGetDBHeight(1)
+            mockGetHistory([])
+            mockClaims([])
+            mockGetBalance(50, 50)
+            mockTicker().reply(200, {})
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_MARKET_PRICE_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_MARKET_PRICE_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Return data malformed')
+        })
+
+        it('should catch GET_TRANSACTION_HISTORY_ERROR network retrieval errors', async () => {
+            mockGetDBHeight(1)
+            mockGetBalance(50, 50)
+            mockTicker(1337, 1337.2, 1337.1)
+            mockClaims([])
+            mockGetHistory().reply(400)
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_TRANSACTION_HISTORY_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_TRANSACTION_HISTORY_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Bad Request')
+        })
+
+        it('should catch GET_TRANSACTION_HISTORY_ERROR malformed return data errors - no missing keys', async () => {
+            mockGetDBHeight(1)
+            mockGetBalance(50, 50)
+            mockTicker(1337, 1337.2, 1337.1)
+            mockClaims([])
+            mockGetHistory().reply(200, {})
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_TRANSACTION_HISTORY_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_TRANSACTION_HISTORY_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Return data malformed')
+        })
+
+        it('should catch GET_TRANSACTION_HISTORY_ERROR malformed return data errors - key value must be Array #1', async () => {
+            mockGetDBHeight(1)
+            mockGetBalance(50, 50)
+            mockTicker(1337, 1337.2, 1337.1)
+            mockClaims([])
+            mockGetHistory().reply(200, { history: undefined })
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_TRANSACTION_HISTORY_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_TRANSACTION_HISTORY_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Return data malformed')
+        })
+
+        it('should catch GET_TRANSACTION_HISTORY_ERROR malformed return data errors - key value must be Array #2', async () => {
+            mockGetDBHeight(1)
+            mockGetBalance(50, 50)
+            mockTicker(1337, 1337.2, 1337.1)
+            mockClaims([])
+            mockGetHistory().reply(200, { history: 123 })
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_TRANSACTION_HISTORY_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_TRANSACTION_HISTORY_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Return data malformed')
+        })
+
+        it('should catch GET_AVAILABLE_GAS_CLAIM_ERROR network retrieval errors', async () => {
+            mockGetDBHeight(1)
+            mockGetBalance(50, 50)
+            mockTicker(1337, 1337.2, 1337.1)
+            mockGetHistory([])
+            mockClaims().reply(400)
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Bad Request')
+        })
+
+        it('should catch GET_AVAILABLE_GAS_CLAIM_ERROR malformed return data errors - no missing keys', async () => {
+            mockGetDBHeight(1)
+            mockGetBalance(50, 50)
+            mockTicker(1337, 1337.2, 1337.1)
+            mockGetHistory([])
+            mockClaims().reply(200, {})
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Return data malformed')
+        })
+
+        it('should catch GET_AVAILABLE_GAS_CLAIM_ERROR malformed return data errors - key values must be Int parseable #1', async () => {
+            mockGetDBHeight(1)
+            mockGetBalance(50, 50)
+            mockTicker(1337, 1337.2, 1337.1)
+            mockGetHistory([])
+            mockClaims().reply(200, { total_claim: undefined })
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Return data malformed')
+        })
+
+        it('should catch GET_AVAILABLE_GAS_CLAIM_ERROR malformed return data errors - key values must be Int parseable #2', async () => {
+            mockGetDBHeight(1)
+            mockGetBalance(50, 50)
+            mockTicker(1337, 1337.2, 1337.1)
+            mockGetHistory([])
+            mockClaims().reply(200, { total_claim: 123, total_unspent_claim: undefined })
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED', true)
+
+            let action = sagaTester.findAction(actionMsg.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Return data malformed')
         })
     })
 })

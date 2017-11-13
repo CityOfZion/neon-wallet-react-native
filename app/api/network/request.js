@@ -23,7 +23,7 @@ const request = function(url, options = {}, ignore_base_url = false) {
     }
 
     const onError = function(error) {
-        console.error('Request failed', error)
+        // console.error('Request failed', error)
         e = new Error(error)
         if (error.message === 'Network request failed') {
             e.networkUnreachable = true

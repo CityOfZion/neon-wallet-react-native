@@ -1,12 +1,22 @@
 import { delay } from 'redux-saga'
 import { put, takeEvery, call, all, takeLatest, select, fork, take, cancel, cancelled, race } from 'redux-saga/effects'
 import { getWallet, getNetwork, getWalletGasBalance } from './selectors'
-import { getBalance, getTransactionHistory, sendAsset, getClaimAmounts, getWalletDBHeight, claimAllGAS } from '../api/network'
+import {
+    getBalance,
+    getTransactionHistory,
+    sendAsset,
+    getClaimAmounts,
+    getWalletDBHeight,
+    claimAllGAS,
+    getMarketPriceUSD
+} from '../api/network'
 import { decryptWIF, generateEncryptedWIF } from '../api/crypto'
 
 import { ActionConstants as actions } from '../actions'
 import { DropDownHolder } from '../utils/DropDownHolder'
-import { getMarketPriceUSD, isBlockedByTransportSecurityPolicy, generateEncryptedWif } from '../utils/walletStuff'
+import { isBlockedByTransportSecurityPolicy, generateEncryptedWif } from '../utils/walletStuff'
+
+let bgTaskHandler = null
 
 export function* rootWalletSaga() {
     yield all([watchCreateWallet(), watchLoginWallet(), watchSendAsset(), watchClaimGAS()])
@@ -28,12 +38,16 @@ export function* watchCreateWallet() {
 export function* watchLoginWallet() {
     while (true) {
         const params = yield take(actions.wallet.LOGIN)
-        yield fork(walletUseFlow, params)
+        yield fork(bgTaskController)
+        const walletFlowTask = yield fork(walletUseFlow, params)
 
         const action = yield take([actions.wallet.LOGOUT, actions.wallet.LOGIN_ERROR])
         if (action.type == actions.wallet.LOGOUT) {
             yield put({ type: actions.wallet.RESET_STATE })
         }
+
+        cancel(walletFlowTask)
+        // bgTaskController isn't started if LOGIN_ERROR occurs, on otherwise it's self ending on LOGOUT or network errors
     }
 }
 
@@ -44,12 +58,33 @@ function* watchSendAsset() {
 function* watchClaimGAS() {
     yield takeEvery(actions.wallet.CLAIM_GAS, claimGASFlow)
 }
-
 /*
  *
  * action takers 
  *
  */
+function* bgTaskController() {
+    yield take(actions.wallet.START_BG_TASK)
+    bgTaskHandler = yield fork(backgroundSyncData)
+
+    // stop task on logout or any network error
+    yield take([
+        actions.wallet.LOGOUT,
+        actions.network.GET_BLOCK_HEIGHT_ERROR,
+        actions.wallet.GET_BALANCE_ERROR,
+        actions.wallet.GET_MARKET_PRICE_ERROR,
+        actions.wallet.GET_TRANSACTION_HISTORY_ERROR,
+        actions.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR
+    ])
+
+    yield cancel(bgTaskHandler)
+
+    // because of https://github.com/wix/redux-saga-tester/issues/38
+    if (global.__SAGA__UNDER_JEST__) {
+        yield put({ type: 'JEST_BG_TASK_CANCELLED' })
+    }
+}
+
 export function* createWalletFlow(args) {
     const { passphrase, wif } = args
 
@@ -77,13 +112,24 @@ function* decryptWalletKeys(encryptedKey, passphrase) {
     }
 }
 
+function* retrieveBlockHeight(address) {
+    try {
+        yield put({ type: actions.network.GET_BLOCK_HEIGHT })
+        const blockHeight = yield call(getWalletDBHeight)
+        yield put({ type: actions.network.GET_BLOCK_HEIGHT_SUCCESS, height: blockHeight })
+        return blockHeight
+    } catch (error) {
+        yield put({ type: actions.network.GET_BLOCK_HEIGHT_ERROR, error })
+    }
+}
+
 function* retrieveBalance(address) {
     try {
         yield put({ type: actions.wallet.GET_BALANCE })
         const balance = yield call(getBalance, address)
         yield put({ type: actions.wallet.GET_BALANCE_SUCCESS, neo: balance.Neo, gas: balance.Gas })
     } catch (error) {
-        yield put({ type: actions.wallet.GET_BALANCE_ERROR, error: error })
+        yield put({ type: actions.wallet.GET_BALANCE_ERROR, error })
     }
 }
 
@@ -93,7 +139,7 @@ function* retrieveMarketPrice() {
         const price = yield call(getMarketPriceUSD)
         yield put({ type: actions.wallet.GET_MARKET_PRICE_SUCCESS, price: price })
     } catch (error) {
-        yield put({ type: actions.wallet.GET_MARKET_PRICE_ERROR, error: error })
+        yield put({ type: actions.wallet.GET_MARKET_PRICE_ERROR, error })
     }
 }
 
@@ -103,7 +149,7 @@ function* retrieveTransactionHistory(address) {
         const transactions = yield call(getTransactionHistory, address)
         yield put({ type: actions.wallet.GET_TRANSACTION_HISTORY_SUCCESS, transactions: transactions })
     } catch (error) {
-        yield put({ type: actions.wallet.GET_TRANSACTION_HISTORY_ERROR, error: error })
+        yield put({ type: actions.wallet.GET_TRANSACTION_HISTORY_ERROR, error })
     }
 }
 
@@ -114,7 +160,7 @@ function* retrieveClaimAmount(address) {
         yield put({ type: actions.wallet.GET_AVAILABLE_GAS_CLAIM_SUCCESS, claimAmounts: claimAmounts })
         // perhaps disable button/functionality until next block update?
     } catch (error) {
-        yield put({ type: actions.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR, error: error })
+        yield put({ type: actions.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR, error })
     }
 }
 
@@ -126,9 +172,7 @@ export function* retrieveData() {
     if (global.__SAGA__UNDER_JEST__) {
         BLOCKCHAIN_UPDATE_INTERVAL = 1000
     }
-
-    yield put({ type: actions.network.UPDATE_BLOCK_HEIGHT })
-    const blockHeight = yield call(getWalletDBHeight)
+    const blockHeight = yield call(retrieveBlockHeight)
 
     if (blockHeight > network.blockHeight[network.net]) {
         yield put({ type: actions.network.SET_BLOCK_HEIGHT, blockHeight: blockHeight })
@@ -170,16 +214,7 @@ export function* walletUseFlow(args) {
     }
 
     // start periodic update of data from the blockchain
-    const bgSync = yield fork(backgroundSyncData)
-
-    // cancel when loging out of wallet
-    yield take(actions.wallet.LOGOUT)
-    yield cancel(bgSync)
-
-    // because of https://github.com/wix/redux-saga-tester/issues/38
-    if (global.__SAGA__UNDER_JEST__) {
-        yield put({ type: 'JEST_BG_TASK_CANCELLED' })
-    }
+    yield put({ type: actions.wallet.START_BG_TASK })
 }
 
 function* sendAssetFlow(args) {
