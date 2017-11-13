@@ -1,87 +1,79 @@
 {
-  "name": "neonwallet",
-  "version": "0.0.1",
-  "private": true,
-  "scripts": {
-    "start": "node node_modules/react-native/local-cli/cli.js start",
-    "postinstall": "rn-nodeify --install buffer,stream,child_process --hack && npm install --save node-libs-react-native",
-    "test": "jest && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
-    "prepare": "patch-package"
-  },
-  "dependencies": {
-    "bigi": "^1.4.2",
-    "bs58": "^4.0.1",
-    "bs58check": "^2.0.2",
-    "buffer": "^4.9.1",
-    "crypto-js": "^3.1.9-1",
-    "ecurve": "^1.0.5",
-    "elliptic": "^6.4.0",
-    "long": "^3.2.0",
-    "node-libs-react-native": "^1.0.1",
-    "prop-types": "^15.5.10",
-    "react": "16.0.0-alpha.12",
-    "react-native": "^0.48.4",
-    "react-native-dropdownalert": "^2.11.0",
-    "react-native-indicators": "^0.10.0",
-    "react-native-modal-dropdown": "^0.5.0",
-    "react-native-vector-icons": "^4.4.0",
-    "react-navigation": "1.0.0-beta.13",
-    "react-redux": "^5.0.6",
-    "readable-stream": "^1.0.33",
-    "redux": "^3.7.2",
-    "redux-logger": "^3.0.6",
-    "redux-persist": "^4.9.1",
-    "redux-saga": "^0.15.6",
-    "rn-nodeify": "^8.2.0",
-    "stream-browserify": "^1.0.0",
-    "wif": "^2.0.6"
-  },
-  "devDependencies": {
-    "babel-core": "^6.26.0",
-    "babel-jest": "21.0.2",
-    "babel-preset-react-native": "4.0.0",
-    "coveralls": "^3.0.0",
-    "isomorphic-fetch": "^2.2.1",
-    "jest": "^21.1.0",
-    "nock": "^9.0.27",
-    "patch-package": "^3.4.6",
-    "react-test-renderer": "16.0.0-alpha.12",
-    "redux-saga-mock": "^1.2.0",
-    "redux-saga-tester": "^1.0.373"
-  },
-  "jest": {
-    "preset": "react-native",
-    "transformIgnorePatterns": [
-      "node_modules/(?!(jest-)?react-native|react-clone-referenced-element|react-navigation)"
-    ],
-    "globals": {
-      "__SAGA__UNDER_JEST__": true
+    "name": "neonwallet",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "start": "node node_modules/react-native/local-cli/cli.js start",
+        "postinstall": "rn-nodeify --install buffer,stream,child_process --hack && npm install --save node-libs-react-native",
+        "test": "./node_modules/.bin/jest -v && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
+        "prepare": "patch-package"
     },
-    "coverageReporters": [
-      "html",
-      "lcov"
-    ],
-    "collectCoverageFrom": [
-      "app/actions/**/*.js",
-      "app/sagas/**/*.js",
-      "app/reducers/**/*.js"
-    ],
-    "collectCoverage": true
-  },
-  "react-native": {
-    "_stream_transform": "readable-stream/transform",
-    "_stream_readable": "readable-stream/readable",
-    "_stream_writable": "readable-stream/writable",
-    "_stream_duplex": "readable-stream/duplex",
-    "_stream_passthrough": "readable-stream/passthrough",
-    "stream": "stream-browserify"
-  },
-  "browser": {
-    "_stream_transform": "readable-stream/transform",
-    "_stream_readable": "readable-stream/readable",
-    "_stream_writable": "readable-stream/writable",
-    "_stream_duplex": "readable-stream/duplex",
-    "_stream_passthrough": "readable-stream/passthrough",
-    "stream": "stream-browserify"
-  }
+    "dependencies": {
+        "bigi": "^1.4.2",
+        "bs58": "^4.0.1",
+        "bs58check": "^2.0.2",
+        "buffer": "^4.9.1",
+        "crypto-js": "^3.1.9-1",
+        "ecurve": "^1.0.5",
+        "elliptic": "^6.4.0",
+        "long": "^3.2.0",
+        "node-libs-react-native": "^1.0.1",
+        "prop-types": "^15.5.10",
+        "react": "16.0.0-alpha.12",
+        "react-native": "^0.48.4",
+        "react-native-dropdownalert": "^2.11.0",
+        "react-native-indicators": "^0.10.0",
+        "react-native-modal-dropdown": "^0.5.0",
+        "react-native-vector-icons": "^4.4.0",
+        "react-navigation": "1.0.0-beta.13",
+        "react-redux": "^5.0.6",
+        "readable-stream": "^1.0.33",
+        "redux": "^3.7.2",
+        "redux-logger": "^3.0.6",
+        "redux-persist": "^4.9.1",
+        "redux-saga": "^0.15.6",
+        "rn-nodeify": "^8.2.0",
+        "stream-browserify": "^1.0.0",
+        "wif": "^2.0.6"
+    },
+    "devDependencies": {
+        "babel-core": "^6.26.0",
+        "babel-jest": "21.0.2",
+        "babel-preset-react-native": "4.0.0",
+        "coveralls": "^3.0.0",
+        "isomorphic-fetch": "^2.2.1",
+        "jest": "^21.1.0",
+        "nock": "^9.0.27",
+        "patch-package": "^3.4.6",
+        "react-test-renderer": "16.0.0-alpha.12",
+        "redux-saga-mock": "^1.2.0",
+        "redux-saga-tester": "^1.0.373"
+    },
+    "jest": {
+        "preset": "react-native",
+        "transformIgnorePatterns": ["node_modules/(?!(jest-)?react-native|react-clone-referenced-element|react-navigation)"],
+        "testPathIgnorePatterns": ["__tests__/helpers.js", "node_modules"],
+        "globals": {
+            "__SAGA__UNDER_JEST__": true
+        },
+        "coverageReporters": ["html", "lcov"],
+        "collectCoverageFrom": ["app/actions/**/*.js", "app/sagas/**/*.js", "app/reducers/**/*.js"],
+        "collectCoverage": true
+    },
+    "react-native": {
+        "_stream_transform": "readable-stream/transform",
+        "_stream_readable": "readable-stream/readable",
+        "_stream_writable": "readable-stream/writable",
+        "_stream_duplex": "readable-stream/duplex",
+        "_stream_passthrough": "readable-stream/passthrough",
+        "stream": "stream-browserify"
+    },
+    "browser": {
+        "_stream_transform": "readable-stream/transform",
+        "_stream_readable": "readable-stream/readable",
+        "_stream_writable": "readable-stream/writable",
+        "_stream_duplex": "readable-stream/duplex",
+        "_stream_passthrough": "readable-stream/passthrough",
+        "stream": "stream-browserify"
+    }
 }

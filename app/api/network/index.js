@@ -9,33 +9,67 @@ import {
 
 export function getBalance(address) {
     var path = '/v2/address/balance/' + address
-
     return request(path).then(response => {
-        const neo = response.NEO
-        const gas = response.GAS
+        try {
+            const neo = response.NEO
+            const gas = response.GAS
 
-        return { Neo: neo.balance, Gas: gas.balance, unspent: { Neo: neo.unspent, Gas: gas.unspent } }
+            if (neo.balance == undefined || gas.balance == undefined || neo.unspent == undefined || gas.unspent == undefined) {
+                throw new TypeError()
+            }
+
+            return { Neo: neo.balance, Gas: gas.balance, unspent: { Neo: neo.unspent, Gas: gas.unspent } }
+        } catch (error) {
+            if (error instanceof TypeError) {
+                throw new Error('Return data malformed')
+            } else {
+                throw new Error(error)
+            }
+        }
     })
 }
 
 export function getWalletDBHeight() {
     var path = '/v2/block/height'
     return request(path).then(response => {
-        return parseInt(response.block_height)
+        let height = parseInt(response.block_height)
+        if (isNaN(height)) {
+            throw new Error('Return data malformed')
+        }
+
+        return height
     })
 }
 
 export function getTransactionHistory(address) {
     var path = '/v2/address/history/' + address
     return request(path).then(response => {
-        return response.history
+        try {
+            if (response.history == undefined || !(response.history instanceof Array)) {
+                throw new TypeError()
+            }
+            if (response.history) return response.history
+        } catch (error) {
+            if (error instanceof TypeError) {
+                throw new Error('Return data malformed')
+            } else {
+                throw new Error(error)
+            }
+        }
     })
 }
 
 export function getClaimAmounts(address) {
     var path = '/v2/address/claims/' + address
     return request(path).then(response => {
-        return { available: parseInt(response.total_claim), unavailable: parseInt(response.total_unspent_claim) }
+        let available = parseInt(response.total_claim)
+        let unavailable = parseInt(response.total_unspent_claim)
+
+        if (isNaN(available) || isNaN(unavailable)) {
+            throw new Error('Return data malformed')
+        }
+
+        return { available: available, unavailable: unavailable }
     })
 }
 
@@ -112,5 +146,26 @@ export function claimAllGAS(fromWif) {
         const signature = signTransactionData(txData, account.privateKey)
         const rawTXData = buildRawTransaction(txData, signature, account.publicKeyEncoded)
         return queryRPC('sendrawtransaction', [rawTXData.toString('hex')], 2)
+    })
+}
+
+export function getMarketPriceUSD() {
+    let fullURL = 'https://bittrex.com/api/v1.1/public/getticker?market=USDT-NEO'
+    let options = {}
+    let OVERRIDE_BASE_URL = true
+
+    return request(fullURL, options, OVERRIDE_BASE_URL).then(response => {
+        try {
+            if (response.result.Last == undefined) {
+                throw new TypeError()
+            }
+            return response.result.Last
+        } catch (error) {
+            if (error instanceof TypeError) {
+                throw new Error('Return data malformed')
+            } else {
+                throw new Error(error)
+            }
+        }
     })
 }
