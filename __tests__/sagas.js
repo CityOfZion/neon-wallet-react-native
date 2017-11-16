@@ -4,14 +4,15 @@ import { mockSaga } from 'redux-saga-mock'
 import nock from 'nock'
 import 'isomorphic-fetch'
 
-import { watchCreateWallet, createWalletFlow, watchLoginWallet, walletUseFlow, backgroundSyncData, retrieveData } from '../app/sagas/wallet'
+import { createWalletFlow, walletUseFlow, backgroundSyncData, claimGASFlow, rootWalletSaga } from '../app/sagas/wallet'
 import { ActionConstants as actionMsg } from '../app/actions'
 import { ActionCreators as actions } from '../app/actions'
 import { generateEncryptedWIF } from '../app/api/crypto'
 import reducer from '../app/reducers'
 import { initialState } from '../app/store'
 import { DropDownHolder } from '../app/utils/DropDownHolder'
-import { mockClaims, mockGetBalance, mockGetDBHeight, mockGetHistory, mockTicker } from './helpers'
+import { mockClaims, mockGetBalance, mockGetDBHeight, mockGetHistory, mockTicker, mockGetRPCEndpoint, mockQueryRPC } from './helpers'
+import { sendAsset, claimAllGAS } from '../app/api/network'
 
 // use official test vectors from https://github.com/neo-project/proposals/blob/master/nep-2.mediawiki#test-vectors
 const unencryptedWIF = 'L44B5gGEpqEDRS9vVPz7QT35jcBG2r3CZwSwQ4fCewXAhAhqGVpP'
@@ -29,13 +30,19 @@ SagaTester.prototype.findAction = function(actionMsgToFind) {
     })
 }
 
+SagaTester.prototype.filterAction = function(actionMsgToFind) {
+    return this.getCalledActions().filter(val => {
+        return val.type === actionMsgToFind
+    })
+}
+
 describe('wallet creation', () => {
     describe('watcher', () => {
         it('should accept any create action', () => {
             const sagaTester = new SagaTester({
                 initialState: {}
             }) // not using any initial state
-            const testSaga = mockSaga(watchCreateWallet)
+            const testSaga = mockSaga(rootWalletSaga)
 
             // setup
             testSaga.stubFork(createWalletFlow, () => {
@@ -60,7 +67,7 @@ describe('wallet creation', () => {
                 initialState: initialState,
                 reducers: reducer
             })
-            testSaga = mockSaga(watchCreateWallet)
+            testSaga = mockSaga(rootWalletSaga)
         })
 
         it('should generate a valid encrypted WIF from only a passphrase', async () => {
@@ -116,7 +123,7 @@ describe('wallet use', () => {
                 initialState: deepClone(initialState),
                 reducers: reducer
             })
-            testSaga = mockSaga(watchLoginWallet)
+            testSaga = mockSaga(rootWalletSaga)
         })
 
         it('should accept just 1 login at a time', () => {
@@ -194,7 +201,7 @@ describe('wallet use', () => {
                 initialState: initialState,
                 reducers: reducer
             })
-            testSaga = mockSaga(watchLoginWallet)
+            testSaga = mockSaga(rootWalletSaga)
             nock.cleanAll()
         })
 
@@ -491,6 +498,128 @@ describe('wallet use', () => {
             let action = sagaTester.findAction(actionMsg.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR)
             expect(sagaTester.wasCalled(actionMsg.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR)).toBe(true)
             expect(action.error.message).toContain('Return data malformed')
+        })
+
+        it('should be possible claim GAS multiple times', async () => {
+            testSaga.stubFork(claimGASFlow, async () => {
+                sagaTester.dispatch({ type: 'TEST_CLAIM_GAS' })
+            })
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.claim())
+            sagaTester.dispatch(actions.wallet.claim())
+            await sagaTester.waitFor('TEST_CLAIM_GAS')
+
+            expect(sagaTester.numCalled('TEST_CLAIM_GAS')).toBe(2)
+        })
+
+        it('should release any unspent claim', async () => {
+            testSaga.stubCall(sendAsset, () => {
+                return true
+            })
+
+            testSaga.stubCall(claimAllGAS, () => {
+                return { result: true }
+            })
+
+            mockGetDBHeight(1) // does not persist
+            mockGetBalance(10, 0).persist()
+            mockTicker(1337, 1337.2, 1337.1) // persists
+            mockGetHistory([]) // persists
+            mockClaims([], 0, 10) // does not persist
+
+            let rpcEndpoint = 'http://test3.cityofzion.io:8880'
+            mockGetRPCEndpoint(rpcEndpoint).persist()
+            mockQueryRPC(rpcEndpoint, 2, true)
+
+            mockGetDBHeight(2)
+            mockClaims([], 10, 0)
+
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+
+            // wait with the claim action until we've gathered some wallet data
+            await sagaTester.waitFor(actionMsg.wallet.GET_BALANCE_SUCCESS)
+            sagaTester.dispatch(actions.wallet.claim())
+            await sagaTester.waitFor(actionMsg.wallet.TRANSACTION_TO_SELF_CLEARED)
+
+            // loging out to quickly abort
+            sagaTester.dispatch({ type: actionMsg.wallet.LOGOUT })
+
+            expect(sagaTester.numCalled(actionMsg.wallet.UNSPEND_CLAIM_TO_CLEAR)).toBe(1)
+            claimSuccesses = sagaTester.filterAction(actionMsg.wallet.GET_AVAILABLE_GAS_CLAIM_SUCCESS)
+            // first time we have unavailable claims to clear
+            expect(claimSuccesses[0].claimAmounts.unavailable).toBe(10)
+            expect(claimSuccesses[0].claimAmounts.available).toBe(0)
+            // second time around they should be cleared
+            expect(claimSuccesses[1].claimAmounts.unavailable).toBe(0)
+            expect(claimSuccesses[1].claimAmounts.available).toBe(10)
+        })
+
+        it('should be able to claim the available unclaimed GAS and confirm it with the blockchain', async () => {
+            // first block data
+            mockGetDBHeight(1) // does not persist
+            mockGetBalance(0, 0)
+            mockTicker(1337, 1337.2, 1337.1) // persists
+            mockGetHistory([]) // persists
+            mockClaims([], 0, 90000000) // does not persist (claim amount is in network format e.g. 0.9 * 100M)
+
+            testSaga.stubCall(claimAllGAS, () => {
+                return { result: true }
+            })
+
+            // second block data
+            mockGetDBHeight(2)
+            mockGetBalance(0, 0)
+            mockClaims([], 0, 10)
+
+            // 3rd block data
+            mockGetDBHeight(3)
+            mockGetBalance(0, 0.9)
+            mockClaims([], 90000000, 0) // mimick confirmed
+
+            // start and drive sagas
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+
+            // wait with the claim action until we've gathered some wallet data
+            await sagaTester.waitFor(actionMsg.wallet.GET_BALANCE_SUCCESS)
+            sagaTester.dispatch(actions.wallet.claim())
+            await sagaTester.waitFor(actionMsg.wallet.CLAIM_GAS_CONFIRMED_BY_BLOCKCHAIN)
+
+            walletState = sagaTester.getState().wallet
+            // loging out to quickly abort
+            sagaTester.dispatch({ type: actionMsg.wallet.LOGOUT })
+
+            // verify
+            expect(walletState.claimAmount).toBe(0.9)
+            expect(walletState.gas).toBe(0.9)
+        })
+
+        it('should gracefully abort the claim flow when the gasClaim RPC call returns False', async () => {
+            // first block data
+            mockGetDBHeight(1) // does not persist
+            mockGetBalance(0, 0)
+            mockTicker(1337, 1337.2, 1337.1) // persists
+            mockGetHistory([]) // persists
+            mockClaims([], 0, 90000000) // does not persist (claim amount is in network format e.g. 0.9 * 100M)
+
+            testSaga.stubCall(claimAllGAS, () => {
+                return { result: false }
+            })
+
+            // start and drive sagas
+            sagaTester.start(testSaga)
+            sagaTester.dispatch(actions.wallet.loginWithPrivateKey(unencryptedWIF))
+
+            // wait with the claim action until we've gathered some wallet data
+            await sagaTester.waitFor(actionMsg.wallet.GET_BALANCE_SUCCESS)
+            sagaTester.dispatch(actions.wallet.claim())
+            await sagaTester.waitFor('JEST_BG_TASK_CANCELLED')
+
+            let action = sagaTester.findAction(actionMsg.wallet.CLAIM_GAS_ERROR)
+            expect(sagaTester.wasCalled(actionMsg.wallet.CLAIM_GAS_ERROR)).toBe(true)
+            expect(action.error.message).toContain('Claim failed')
         })
     })
 })
