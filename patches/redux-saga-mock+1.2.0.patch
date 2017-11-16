@@ -1,5 +1,5 @@
 diff --git a/node_modules/redux-saga-mock/dist/mockSaga.js b/node_modules/redux-saga-mock/dist/mockSaga.js
-index 2c77ae2..d447267 100644
+index 2c77ae2..b04d0ac 100644
 --- a/node_modules/redux-saga-mock/dist/mockSaga.js
 +++ b/node_modules/redux-saga-mock/dist/mockSaga.js
 @@ -33,7 +33,7 @@ var _lodash2 = _interopRequireDefault(_lodash);
@@ -11,7 +11,17 @@ index 2c77ae2..d447267 100644
    return _regenerator2.default.wrap(function _callee$(_context) {
      while (1) {
        switch (_context.prev = _context.next) {
-@@ -100,6 +100,11 @@ var matchers = exports.matchers = {
+@@ -66,6 +66,9 @@ var isRACE = function isRACE(effect) {
+ var isFORK = function isFORK(effect) {
+   return _lodash2.default.isObject(effect) && effect['@@redux-saga/IO'] && effect.FORK;
+ };
++var isALL = function isALL(effect) {
++  return _lodash2.default.isObject(effect) && effect['@@redux-saga/IO'] && effect.ALL;
++};
+ 
+ var matchers = exports.matchers = {
+   putAction: function putAction(action) {
+@@ -100,6 +103,11 @@ var matchers = exports.matchers = {
        return isCALL(effect) && effect.CALL.fn === fn && _lodash2.default.isEqual(effect.CALL.args, args);
      };
    },
@@ -23,7 +33,18 @@ index 2c77ae2..d447267 100644
    forkGeneratorFn: function forkGeneratorFn() {
      return function (effect) {
        return isFORK(effect) && effect.FORK.fn instanceof GeneratorFunction;
-@@ -155,7 +160,7 @@ function findAllIndexes(array, matcher) {
+@@ -140,6 +148,10 @@ function rreplace(matcher, effect, replEffCreator) {
+     return _lodash2.default.map(effect, function (e) {
+       return rreplace(matcher, e, replEffCreator);
+     });
++  } else if (isALL(effect)) {
++    return (0, _assign2.default)({}, effect, {
++      ALL: rreplace(matcher, effect.ALL, replEffCreator)
++    });
+   }
+   return effect;
+ }
+@@ -155,7 +167,7 @@ function findAllIndexes(array, matcher) {
    return indexes;
  }
  
@@ -32,7 +53,7 @@ index 2c77ae2..d447267 100644
  
  function isSaga(saga) {
    return Array.isArray(saga) || saga instanceof GeneratorFunction || !!saga.next;
-@@ -213,105 +218,90 @@ function mockArray(sagas) {
+@@ -213,105 +225,90 @@ function mockArray(sagas) {
  }
  
  function createGenerator(saga, effects, listenersPre, listenersPost, stubs) {
@@ -215,7 +236,7 @@ index 2c77ae2..d447267 100644
  }
  
  function stubCallCreator(newTargetFn) {
-@@ -321,6 +311,13 @@ function stubCallCreator(newTargetFn) {
+@@ -321,6 +318,13 @@ function stubCallCreator(newTargetFn) {
    };
  }
  
@@ -229,7 +250,7 @@ index 2c77ae2..d447267 100644
  var addListener = function addListener(target, listeners, callback, matcher) {
    for (var _len2 = arguments.length, args = Array(_len2 > 4 ? _len2 - 4 : 0), _key2 = 4; _key2 < _len2; _key2++) {
      args[_key2 - 4] = arguments[_key2];
-@@ -357,10 +354,10 @@ function mockGenerator(saga) {
+@@ -357,10 +361,10 @@ function mockGenerator(saga) {
  
    var createStub = function createStub(matcher, stubCreator) {
      if (!_lodash2.default.isFunction(stubCreator)) throw new Error('stub function required');
@@ -244,7 +265,7 @@ index 2c77ae2..d447267 100644
      if (pos !== -1) {
        stubs[pos] = s;
      } else {
-@@ -442,6 +439,9 @@ function mockGenerator(saga) {
+@@ -442,6 +446,9 @@ function mockGenerator(saga) {
      stubCallWithExactArgs: function stubCallWithExactArgs(fn, args, stub) {
        return createStub(matchers.callWithExactArgs(fn, args), stubCallCreator(stub));
      },
@@ -254,7 +275,7 @@ index 2c77ae2..d447267 100644
      resetStubs: function resetStubs() {
        stubs.splice(stubs.length - 3, 3);return retval;
      }, // last 3 stubs are for forks, calls to generator and arrays
-@@ -456,12 +456,10 @@ function mockGenerator(saga) {
+@@ -456,12 +463,10 @@ function mockGenerator(saga) {
  
  function createQueryMethods(getEffects) {
    if (Array.isArray(getEffects)) {
@@ -271,3 +292,65 @@ index 2c77ae2..d447267 100644
    }
    var findEffect = function findEffect(effect) {
      var fromPos = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+diff --git a/node_modules/redux-saga-mock/src/mockSaga.js b/node_modules/redux-saga-mock/src/mockSaga.js
+index f3f1841..71da7fb 100644
+--- a/node_modules/redux-saga-mock/src/mockSaga.js
++++ b/node_modules/redux-saga-mock/src/mockSaga.js
+@@ -13,6 +13,7 @@ const isTAKE = (effect) => _.isObject(effect) && effect['@@redux-saga/IO'] && ef
+ const isCALL = (effect) => _.isObject(effect) && effect['@@redux-saga/IO'] && effect.CALL
+ const isRACE = (effect) => _.isObject(effect) && effect['@@redux-saga/IO'] && effect.RACE
+ const isFORK = (effect) => _.isObject(effect) && effect['@@redux-saga/IO'] && effect.FORK
++const isALL = (effect) => _.isObject(effect) && effect['@@redux-saga/IO'] && effect.ALL
+ 
+ export const matchers = {
+   putAction: (action) => _.isString(action)
+@@ -28,6 +29,8 @@ export const matchers = {
+     effect => isCALL(effect) && effect.CALL.fn === fn && _.isMatch(effect.CALL.args, args),
+   callWithExactArgs: (fn, args) =>
+     effect => isCALL(effect) && effect.CALL.fn === fn && _.isEqual(effect.CALL.args, args),
++  fork: (fn) => 
++    effect => isFORK(effect) && effect.FORK.fn === fn,
+   forkGeneratorFn: () =>
+     effect => isFORK(effect) && effect.FORK.fn instanceof GeneratorFunction,
+   callGeneratorFn: () =>
+@@ -57,6 +60,10 @@ function rreplace (matcher, effect, replEffCreator) {
+     })
+   } else if (_.isArray(effect)) {
+     return _.map(effect, (e) => rreplace(matcher, e, replEffCreator))
++  } else if (isALL(effect)) {
++    return Object.assign({}, effect, {
++      ALL: rreplace(matcher, effect.ALL, replEffCreator)
++    })
+   }
+   return effect
+ }
+@@ -85,6 +92,7 @@ const chainableMethods = [
+   'stubCall',
+   'stubCallWithArgs',
+   'stubCallWithExactArgs',
++  'stubFork',
+   'resetStubs',
+   'clearStoredEffects'
+ ]
+@@ -162,6 +170,13 @@ function stubCallCreator (newTargetFn) {
+   }
+ }
+ 
++function stubForkCreator (newTargetFn) {
++  return effect => {
++    let cloned = _.cloneDeep(effect)
++    return _.set(cloned, 'FORK.fn', newTargetFn)
++  }
++}
++
+ const addListener = (target, listeners, callback, matcher, ...args) => {
+   let retval
+   if (callback) {
+@@ -249,6 +264,7 @@ function mockGenerator (saga) {
+     stubCall: (fn, stub) => createStub(matchers.call(fn), stubCallCreator(stub)),
+     stubCallWithArgs: (fn, args, stub) => createStub(matchers.callWithArgs(fn, args), stubCallCreator(stub)),
+     stubCallWithExactArgs: (fn, args, stub) => createStub(matchers.callWithExactArgs(fn, args), stubCallCreator(stub)),
++    stubFork: (fn, stub) => createStub(matchers.fork(fn), stubForkCreator(stub)),
+     resetStubs: () => { stubs.splice(stubs.length - 3, 3); return retval },  // last 3 stubs are for forks, calls to generator and arrays
+     clearStoredEffects: () => { effects.length = 0; return retval }
+   }

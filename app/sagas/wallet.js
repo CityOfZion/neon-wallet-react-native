@@ -55,8 +55,11 @@ function* watchSendAsset() {
     yield takeEvery(actions.wallet.SEND_ASSET, sendAssetFlow)
 }
 
-function* watchClaimGAS() {
-    yield takeEvery(actions.wallet.CLAIM_GAS, claimGASFlow)
+export function* watchClaimGAS() {
+    while (true) {
+        const params = yield take(actions.wallet.CLAIM_GAS)
+        yield fork(claimGASFlow, params)
+    }
 }
 /*
  *
@@ -74,9 +77,9 @@ function* bgTaskController() {
         actions.wallet.GET_BALANCE_ERROR,
         actions.wallet.GET_MARKET_PRICE_ERROR,
         actions.wallet.GET_TRANSACTION_HISTORY_ERROR,
-        actions.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR
+        actions.wallet.GET_AVAILABLE_GAS_CLAIM_ERROR,
+        actions.wallet.CLAIM_GAS_ERROR
     ])
-
     yield cancel(bgTaskHandler)
 
     // because of https://github.com/wix/redux-saga-tester/issues/38
@@ -269,10 +272,10 @@ function* claim(wif) {
         if (response.result == true) {
             yield put({ type: actions.wallet.CLAIM_GAS_SUCCESS })
         } else {
-            yield put({ type: actions.wallet.CLAIM_GAS_ERROR, error: 'Claim failed' })
+            throw new Error('Claim failed')
         }
     } catch (error) {
-        yield put({ type: actions.wallet.CLAIM_GAS_ERROR, error: error })
+        yield put({ type: actions.wallet.CLAIM_GAS_ERROR, error })
     }
 }
 
@@ -292,7 +295,7 @@ function* waitForTransactionToSelfToClear(previousUnspendClaim) {
     }
 }
 
-function* claimGASFlow() {
+export function* claimGASFlow() {
     const wallet = yield select(getWallet)
 
     /* If we have NEO balance in our wallet, then part or all of the available claim can be "unspent_claim".
@@ -311,8 +314,13 @@ function* claimGASFlow() {
 
         yield take(actions.wallet.TRANSACTION_TO_SELF_CLEARED)
     }
-    yield call(claim, wallet.wif)
+    claimGASTask = yield fork(claim, wallet.wif)
 
+    const action = yield take([actions.wallet.CLAIM_GAS_SUCCESS, actions.wallet.CLAIM_GAS_ERROR])
+    if (action.type == actions.wallet.CLAIM_GAS_ERROR) {
+        cancel(claimGASTask)
+        return
+    }
     // Wait for GAS balance to be confirmed
     const oldGASBalance = wallet.gas
     while (true) {
@@ -329,3 +337,21 @@ function* claimGASFlow() {
         }
     }
 }
+
+// function* monitorNetworkHealth() {
+//     while(true) {
+//         // do some network test
+//         if (ok) {
+//             set ONLINE_FLAG
+//             if (was bgsync) {
+//                 restart bgsync
+//             }
+//         }
+//         if (!ok) {
+//             set OFFLINE flag
+//             if (bgsync) {
+//                 stop bgsync
+//             }
+//         }
+//     }
+// }
