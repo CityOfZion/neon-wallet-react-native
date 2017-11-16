@@ -14,7 +14,6 @@ export const mockGetDBHeight = function(height_return_value) {
 
 export const mockGetBalance = function(balanceNEO, balanceGAS) {
     let matcher = nock('http://testnet-api.wallet.cityofzion.io')
-        .persist()
         .filteringPath(function(path) {
             if (path.includes('/v2/address/balance/')) {
                 return '/v2/address/balance/'
@@ -24,7 +23,7 @@ export const mockGetBalance = function(balanceNEO, balanceGAS) {
         })
         .get('/v2/address/balance/')
 
-    if (balanceNEO && balanceGAS) {
+    if (balanceNEO !== undefined && balanceGAS !== undefined) {
         return matcher.reply(200, {
             GAS: {
                 balance: balanceGAS,
@@ -65,9 +64,8 @@ export const mockGetHistory = function(history) {
     }
 }
 
-export const mockClaims = function(claims) {
+export const mockClaims = function(claims, total_claim = 0, total_unspent_claim = 0) {
     let matcher = nock('http://testnet-api.wallet.cityofzion.io')
-        .persist()
         .filteringPath(function(path) {
             if (path.includes('/v2/address/claims/')) {
                 return '/v2/address/claims/'
@@ -82,8 +80,8 @@ export const mockClaims = function(claims) {
             address: 'AStZHy8E6StCqYQbzMqi4poH7YNDHQKxvt',
             claims: claims,
             net: 'TestNet',
-            total_claim: 0,
-            total_unspent_claim: 0
+            total_claim: total_claim,
+            total_unspent_claim: total_unspent_claim
         })
     } else {
         return matcher
@@ -99,9 +97,40 @@ export const mockTicker = function(bid, ask, last) {
         matcher.reply(200, {
             success: true,
             message: '',
-            result: { Bid: 1337.00000001, Ask: 1337.00000002, Last: 1337.00000003 }
+            result: { Bid: bid, Ask: ask, Last: last }
         })
     } else {
         return matcher
     }
+}
+
+export const mockGetRPCEndpoint = function(nodeAddress) {
+    let matcher = nock('http://testnet-api.wallet.cityofzion.io')
+        .filteringPath(function(path) {
+            if (path.includes('/v2/network/best_node')) {
+                return '/v2/network/best_node'
+            } else {
+                return path
+            }
+        })
+        .get('/v2/network/best_node')
+
+    if (nodeAddress) {
+        return matcher.reply(200, {
+            net: 'TestNet',
+            node: nodeAddress // "http://test3.cityofzion.io:8880"
+        })
+    } else {
+        return matcher
+    }
+}
+
+export const mockQueryRPC = function(rpcAddress, id, result) {
+    let matcher = nock(rpcAddress)
+        .get('/')
+        .reply(200, {
+            jsonrpc: '2.0',
+            id: id,
+            result: result // bool
+        })
 }
