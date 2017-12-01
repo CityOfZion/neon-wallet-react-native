@@ -173,7 +173,7 @@ export function encryptWIF(wif, passphrase) {
  * @param {String} passphrase - The password will be encoded as UTF-8.
  * @returns {string|throw{Error}} If successful the encrypted key in Base58 (Case sensitive) or throws an Error if password wrong
  */
-export function decryptWIF(encryptedWIF, passphrase) {
+export function decryptWIF(encryptedWIF, passphrase, scrypt_params = SCRYPT_PARAMS) {
     const ADDRESS_HASH_OFFSET = Buffer.from(NEP_HEADER + NEP_FLAG, 'hex').length
     const ADDRESS_HASH_SIZE = 4
 
@@ -185,10 +185,10 @@ export function decryptWIF(encryptedWIF, passphrase) {
         scrypt(
             Buffer.from(passphrase.normalize('NFC'), 'utf8'),
             addressHash,
-            SCRYPT_PARAMS.ITERATIONS,
-            SCRYPT_PARAMS.BLOCKSIZE,
-            SCRYPT_PARAMS.PARALLEL_FACTOR,
-            SCRYPT_PARAMS.KEY_LEN_BYTES
+            scrypt_params.ITERATIONS,
+            scrypt_params.BLOCKSIZE,
+            scrypt_params.PARALLEL_FACTOR,
+            scrypt_params.KEY_LEN_BYTES
         )
     )
     const derived1 = derived.slice(0, 32)

@@ -33,6 +33,11 @@ const UNSPEND_CLAIM_TO_CLEAR = 'WALLET/UNSPEND_CLAIM_TO_CLEAR'
 const TRANSACTION_TO_SELF_CLEARED = 'WALLET/TRANSACTION_TO_SELF_CLEARED'
 const WAITING_FOR_TRANSACTION_TO_SELF_TO_CLEAR = 'WALLET/WAITING_FOR_TRANSACTION_TO_SELF_TO_CLEAR'
 const START_BG_TASK = 'WALLET/START_BG_TASK'
+const IMPORT_NEP6 = 'WALLET/IMPORT_NEP6'
+const IMPORT_NEP6_START = 'WALLET/IMPORT_NEP6_START'
+const IMPORT_NEP6_SUCCESS = 'WALLET/IMPORT_NEP6_SUCCESS'
+const IMPORT_NEP6_ERROR = 'WALLET/IMPORT_NEP6_ERROR'
+const IMPORT_NEP6_PROVIDE_PW = 'WALLET/IMPORT_NEP6_PROVIDE_PW'
 
 export const constants = {
     CREATE_WALLET,
@@ -69,7 +74,12 @@ export const constants = {
     UNSPEND_CLAIM_TO_CLEAR,
     TRANSACTION_TO_SELF_CLEARED,
     WAITING_FOR_TRANSACTION_TO_SELF_TO_CLEAR,
-    START_BG_TASK
+    START_BG_TASK,
+    IMPORT_NEP6,
+    IMPORT_NEP6_START,
+    IMPORT_NEP6_SUCCESS,
+    IMPORT_NEP6_ERROR,
+    IMPORT_NEP6_PROVIDE_PW
 }
 
 export const ASSET_TYPE = {
@@ -128,5 +138,19 @@ export function sendAsset(toAddress, amount, assetType) {
 export function claim() {
     return {
         type: CLAIM_GAS
+    }
+}
+
+export function importWalletsFrom(url) {
+    return {
+        type: IMPORT_NEP6,
+        url
+    }
+}
+
+export function provideNEP6Passphrase(pw) {
+    return {
+        type: IMPORT_NEP6_PROVIDE_PW,
+        pw
     }
 }

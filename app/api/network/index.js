@@ -169,3 +169,20 @@ export function getMarketPriceUSD() {
         }
     })
 }
+
+export function getWalletDataFrom(url) {
+    let options = {}
+    let OVERRIDE_BASE_URL = true
+    return request(url, options, OVERRIDE_BASE_URL).then(response => {
+        try {
+            data = {}
+            data.scrypt = response.scrypt
+            data.accounts = response.accounts.map(acc => {
+                return { key: acc.key, label: acc.label }
+            })
+            return data
+        } catch (error) {
+            throw new Error('Wallet format invalid or corrupt')
+        }
+    })
+}

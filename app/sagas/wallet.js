@@ -8,7 +8,8 @@ import {
     getClaimAmounts,
     getWalletDBHeight,
     claimAllGAS,
-    getMarketPriceUSD
+    getMarketPriceUSD,
+    getWalletDataFrom
 } from '../api/network'
 import { decryptWIF, generateEncryptedWIF } from '../api/crypto'
 
@@ -19,7 +20,7 @@ import { isBlockedByTransportSecurityPolicy, generateEncryptedWif } from '../uti
 let bgTaskHandler = null
 
 export function* rootWalletSaga() {
-    yield all([watchCreateWallet(), watchLoginWallet(), watchSendAsset(), watchClaimGAS()])
+    yield all([watchCreateWallet(), watchLoginWallet(), watchSendAsset(), watchClaimGAS(), watchImportNEP6()])
 }
 
 /*
@@ -51,7 +52,7 @@ export function* watchLoginWallet() {
     }
 }
 
-function* watchSendAsset() {
+export function* watchSendAsset() {
     yield takeEvery(actions.wallet.SEND_ASSET, sendAssetFlow)
 }
 
@@ -59,6 +60,13 @@ export function* watchClaimGAS() {
     while (true) {
         const params = yield take(actions.wallet.CLAIM_GAS)
         yield fork(claimGASFlow, params)
+    }
+}
+
+export function* watchImportNEP6() {
+    while (true) {
+        const params = yield take(actions.wallet.IMPORT_NEP6)
+        yield fork(importNEP6Wallets, params)
     }
 }
 /*
@@ -220,10 +228,9 @@ export function* walletUseFlow(args) {
     yield put({ type: actions.wallet.START_BG_TASK })
 }
 
-function* sendAssetFlow(args) {
+export function* sendAssetFlow(args) {
     const { assetType, toAddress, amount } = args
     const wallet = yield select(getWallet)
-    const network = yield select(getNetwork)
     const FIVE_SECONDS = 5000
 
     try {
@@ -335,6 +342,47 @@ export function* claimGASFlow() {
         } else {
             yield take(actions.wallet.GET_BALANCE_SUCCESS)
         }
+    }
+}
+
+function* importNEP6Wallets(args) {
+    const { url } = args
+    try {
+        yield put({ type: actions.wallet.IMPORT_NEP6_START })
+        let wallet_data = yield call(getWalletDataFrom, url)
+        const scrypt = wallet_data.scrypt
+
+        // check if default NEP2 values used for key encryption
+        if (scrypt.n != 16384 || scrypt.p != 8 || scrypt.r != 8) {
+            const scrypt_params = {
+                ITERATIONS: scrypt.n,
+                BLOCKSIZE: scrypt.r,
+                PARALLEL_FACTOR: scrypt.p,
+                KEY_LEN_BYTES: 64
+            }
+
+            // ask for pw such that we can decrypt, then encrypt using NEP2 default settings
+            yield put({ type: actions.wallet.IMPORT_NEP6_NEED_PASSPHRASE })
+            const passphrase = yield take({ type: actions.wallet.IMPORT_NEP6_PROVIDE_PW })
+
+            let nep2Accounts = []
+            for (let acc of wallet_data.accounts) {
+                const plainKey = yield call(decryptWIF, acc.key, passphrase, scrypt_params)
+                const account = yield call(generateEncryptedWIF, passphrase, plainkey)
+                nep2Accounts.push({ key: account.encryptedWIF, label: acc.label })
+            }
+            wallet_data.accounts = nep2Accounts
+        }
+
+        // store keys in settings
+        for (let acc of wallet_data.accounts) {
+            yield put({ type: actions.settings.SAVE_KEY, key: acc.key, name: acc.label })
+        }
+
+        yield put({ type: actions.wallet.IMPORT_NEP6_SUCCESS })
+    } catch (error) {
+        yield put({ type: actions.wallet.IMPORT_NEP6_ERROR, error })
+        DropDownHolder.getDropDown().alertWithType('error', 'Error', 'Importing wallet file failed')
     }
 }
 
