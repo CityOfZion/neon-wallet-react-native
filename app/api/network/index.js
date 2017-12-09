@@ -6,6 +6,8 @@ import {
     buildRawTransaction,
     signTransactionData
 } from '../crypto'
+import { getTokenBalanceScript } from '../crypto/nep5'
+import { reverse } from '../crypto/utils'
 
 export function getBalance(address) {
     var path = '/v2/address/balance/' + address
@@ -184,5 +186,25 @@ export function getWalletDataFrom(url) {
         } catch (error) {
             throw new Error('Wallet format invalid or corrupt')
         }
+    })
+}
+
+/**
+ * Get the balance of a NEP5 Token
+ * @param {String} token hash (hex)
+ * @param {String} public address of account to check token balance of
+ * @returns {int} token abalance
+ */
+
+export function getTokenBalance(token, address) {
+    const NETWORK_STORAGE_MULTIPLIER = 100000000
+    return queryRPC('invokescript', [getTokenBalanceScript(token, address).toString('hex')], 2).then(response => {
+        let valueBuf = Buffer.from(response.result.stack[0].value, 'hex')
+        let value = parseInt(reverse(valueBuf).toString('hex'), 16) / NETWORK_STORAGE_MULTIPLIER
+
+        if (isNaN(value)) {
+            value = 0
+        }
+        return value
     })
 }
