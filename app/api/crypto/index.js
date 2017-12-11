@@ -354,7 +354,7 @@ export function buildClaimTransactionData(claims, amountToRecipient, publicKeyEn
  * @param {Buffer} accountAddressHash - own account address hash
  * @param {Buffer} destinationAddressHash - recipient address hash
  */
-function buildOutputDataFrom(amount, totalValueOfInputs, assetId, accountAddressHash, destinationAddressHash) {
+export function buildOutputDataFrom(amount, totalValueOfInputs, assetId, accountAddressHash, destinationAddressHash) {
     // if we send our complete balance we need just 1 output entry
     // otherwise we need a second output to return the remainder of the balance to ourselves
     const OUTPUT_COUNT = amount == totalValueOfInputs ? 0x01 : 0x02
@@ -420,7 +420,7 @@ function getOutputEntryFrom(assetId, amount, scripthash) {
  * @param {number|string} amountToSend 
  * @returns {Object} {{Buffer}inputs: Buffer of input data, {number}totalValueOfInputs: sum of UTXO values}
  */
-function buildInputDataFrom(UTXOs, amountToSend) {
+export function buildInputDataFrom(UTXOs, amountToSend) {
     let orderedUTXOs = UTXOs
     for (let i = 0; i < orderedUTXOs.length - 1; i++) {
         for (let j = 0; j < orderedUTXOs.length - 1 - i; j++) {
@@ -500,7 +500,7 @@ function getInputEntryFrom(utxo) {
  * @param {Buffer} signatureScript
  * @returns {Buffer} Hashed output
  */
-function getHash(signatureScript) {
+export function getHash(signatureScript) {
     let ProgramHexString = CryptoJS.enc.Hex.parse(signatureScript.toString('hex'))
     let ProgramSha256 = CryptoJS.SHA256(ProgramHexString)
     return new Buffer(CryptoJS.RIPEMD160(ProgramSha256).toString(), 'hex')
@@ -511,7 +511,7 @@ function getHash(signatureScript) {
  * @param {Buffer} publicKeyEncoded - encoded public key
  * @returns {Buffer} script
  */
-function createSignatureScript(publicKeyEncoded) {
+export function createSignatureScript(publicKeyEncoded) {
     let script = new Buffer('21' + publicKeyEncoded.toString('hex') + 'ac', 'hex')
     return script
 }

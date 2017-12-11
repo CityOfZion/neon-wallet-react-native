@@ -6,7 +6,7 @@ import {
     buildRawTransaction,
     signTransactionData
 } from '../crypto'
-import { getTokenBalanceScript } from '../crypto/nep5'
+import { getTokenBalanceScript, buildInvocationTransactionData } from '../crypto/nep5'
 import { reverse } from '../crypto/utils'
 
 export function getBalance(address) {
@@ -144,7 +144,6 @@ export function claimAllGAS(fromWif) {
         const totalClaim = response['total_claim']
 
         const txData = buildClaimTransactionData(claims, totalClaim, account.publicKeyEncoded)
-        console.log(txData.toString('hex'))
         const signature = signTransactionData(txData, account.privateKey)
         const rawTXData = buildRawTransaction(txData, signature, account.publicKeyEncoded)
         return queryRPC('sendrawtransaction', [rawTXData.toString('hex')], 2)
@@ -206,5 +205,28 @@ export function getTokenBalance(token, address) {
             value = 0
         }
         return value
+    })
+}
+
+/**
+ *
+ * @param {string} destinationAddress - The destination address.
+ * @param {string} WIF - The WIF of the originating address.
+ * @param {string} token - token scripthash (hex string).
+ * @param {number} amount - of tokens to sent
+ * @return {Promise<Response>} RPC Response
+ */
+export function SendNEP5Asset(destinationAddress, WIF, token, amount) {
+    let assetId = getAssetId('Gas')
+    const fromAccount = getAccountFromWIF(WIF)
+
+    return getBalance(fromAccount.address).then(response => {
+        const UTXOs = response.unspent['Gas']
+        const txData = buildInvocationTransactionData(UTXOs, assetId, fromAccount.publicKeyEncoded, destinationAddress, amount, token)
+        console.log(txData.toString('hex'))
+        const signature = signTransactionData(txData, fromAccount.privateKey)
+        const rawTXData = buildRawTransaction(txData, signature, fromAccount.publicKeyEncoded)
+
+        return queryRPC('sendrawtransaction', [rawTXData.toString('hex')], 4)
     })
 }
