@@ -5,8 +5,12 @@
  */
 export function reverse(input) {
     let result = Buffer.alloc(input.length)
-    for (let i = input.length - 1, offset = 0; i >= 0; i--, offset++) {
-        result[offset] = input[i]
+    if (result.length > 1) {
+        for (let i = input.length - 1, offset = 0; i >= 0; i-- , offset++) {
+            result[offset] = input[i]
+        }
+    } else {
+        result = input
     }
     return result
 }

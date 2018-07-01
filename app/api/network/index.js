@@ -8,13 +8,23 @@ import {
 } from '../crypto'
 import { getTokenBalanceScript, buildInvocationTransactionData } from '../crypto/nep5'
 import { reverse } from '../crypto/utils'
+import { isNullOrUndefined } from 'util';
 
 export function getBalance(address) {
-    var path = '/v2/address/balance/' + address
+    var path = '/api/main_net/v1/get_balance/' + address
     return request(path).then(response => {
         try {
-            const neo = response.NEO
-            const gas = response.GAS
+            if (response.address === 'not found' || isNullOrUndefined(response.balance)) {
+                return { Neo: 0, Gas: 0, unspent: { Neo: [], Gas: [] } }
+            }
+
+            let assets = {}
+            response.balance.forEach(function (asset) {
+                assets = { ...assets, [asset.asset]: { balance: asset.amount, unspent: asset.unspent } }
+            })
+
+            const neo = assets.NEO
+            const gas = assets.GAS
 
             if (neo.balance == undefined || gas.balance == undefined || neo.unspent == undefined || gas.unspent == undefined) {
                 throw new TypeError()
@@ -32,9 +42,9 @@ export function getBalance(address) {
 }
 
 export function getWalletDBHeight() {
-    var path = '/v2/block/height'
+    var path = '/api/main_net/v1/get_height'
     return request(path).then(response => {
-        let height = parseInt(response.block_height)
+        let height = parseInt(response.height)
         if (isNaN(height)) {
             throw new Error('Return data malformed')
         }
@@ -44,13 +54,14 @@ export function getWalletDBHeight() {
 }
 
 export function getTransactionHistory(address) {
-    var path = '/v2/address/history/' + address
+    var path = '/api/main_net/v1/get_address_abstracts/' + address + '/1'
+
     return request(path).then(response => {
         try {
-            if (response.history == undefined || !(response.history instanceof Array)) {
+            if (response.entries == undefined || !(response.entries instanceof Array)) {
                 throw new TypeError()
             }
-            if (response.history) return response.history
+            if (response.entries) return response.entries
         } catch (error) {
             if (error instanceof TypeError) {
                 throw new Error('Return data malformed')
@@ -62,16 +73,16 @@ export function getTransactionHistory(address) {
 }
 
 export function getClaimAmounts(address) {
-    var path = '/v2/address/claims/' + address
+    var path = '/api/main_net/v1/get_claimable/' + address
     return request(path).then(response => {
-        let available = parseInt(response.total_claim)
-        let unavailable = parseInt(response.total_unspent_claim)
+        let total_available = parseFloat(response.unclaimed)
+        let to_be_released = response.claimable // is a list[]
 
-        if (isNaN(available) || isNaN(unavailable)) {
+        if (isNaN(total_available) || isNullOrUndefined(to_be_released)) {
             throw new Error('Return data malformed')
         }
 
-        return { available: available, unavailable: unavailable }
+        return { total_available: total_available, to_be_released: to_be_released }
     })
 }
 
@@ -112,10 +123,11 @@ export function sendAsset(destinationAddress, WIF, assetType, amount) {
 }
 
 function getRPCEndpoint() {
-    var path = '/v2/network/best_node'
-
-    return request(path).then(response => {
-        return response.node
+    // hardcode a Mainnet node RPC address, until we find a good replacement
+    // for neon-wallet-db's `'/v2/network/best_node'` call. neoscan doesn't have one at this point.
+    return new Promise(function (resolve, reject) {
+        console.log("WARNING: RPC END POINT IS HARDCODED TO NEO MAINNET")
+        resolve('http://neo-privnet:30333')
     })
 }
 
@@ -130,7 +142,13 @@ export const queryRPC = (method, params, id = 1) => {
             body: JSON.stringify(jsonRpcData)
         }
         return request(rpcEndpoint, options, true).then(response => {
-            return response
+            return new Promise((resolve, reject) => {
+                if (response.result == true) {
+                    resolve({})
+                } else {
+                    reject({})
+                }
+            })
         })
     })
 }
@@ -138,12 +156,11 @@ export const queryRPC = (method, params, id = 1) => {
 export function claimAllGAS(fromWif) {
     const account = getAccountFromWIF(fromWif)
 
-    var path = '/v2/address/claims/' + account.address
+    var path = '/api/main_net/v1/get_claimable/' + account.address
     return request(path).then(response => {
-        const claims = response['claims']
-        const totalClaim = response['total_claim']
+        const claimables = response['claimable']
 
-        const txData = buildClaimTransactionData(claims, totalClaim, account.publicKeyEncoded)
+        const txData = buildClaimTransactionData(claimables, account.publicKeyEncoded)
         const signature = signTransactionData(txData, account.privateKey)
         const rawTXData = buildRawTransaction(txData, signature, account.publicKeyEncoded)
         return queryRPC('sendrawtransaction', [rawTXData.toString('hex')], 2)
@@ -222,6 +239,7 @@ export function SendNEP5Asset(destinationAddress, WIF, token, amount) {
 
     return getBalance(fromAccount.address).then(response => {
         const UTXOs = response.unspent['Gas']
+        // TODO: abort if UTXO's is 0, because it will throw an error in `buildContractTransactionData` specifically
         const txData = buildInvocationTransactionData(UTXOs, assetId, fromAccount.publicKeyEncoded, destinationAddress, amount, token)
         console.log(txData.toString('hex'))
         const signature = signTransactionData(txData, fromAccount.privateKey)

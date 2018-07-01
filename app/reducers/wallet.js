@@ -3,6 +3,19 @@ import { getAccountFromWIF } from '../api/crypto'
 
 import { ASSET_TYPE } from '../actions/wallet'
 
+// TODO: get this list using 'api/main_net/v1/get_assets' because it can differ per network
+assetType = {
+    'c56f33fc6ecfcd0c225c4ab356fee59390af8560be0e930faebe74a6daff7c9b': 'NEO',
+    '602c79718b16e442de58778e148d0b1084e3b2dffd5de6b7b16cee7969282de7': 'GAS',
+    'a87cc2a513f5d8b4a42432343687c2127c60bc3f': 'MCT',
+    'ecc6b20d3ccac1ee9ef109af5a7cdb85706b1df9': 'RPX',
+    'ceab719b8baa2310f232ee0d277c061704541cfb': 'ONT',
+    'daca711e1636a8ab4e5e2beedcd3815e2ac16fac': 'CDT',
+    '584660c663f114d803928b77cb9abdd585a0fc17': 'PCG1'
+}
+
+const NETWORK_STORAGE_MULTIPLIER = 100000000 // read more here: https://github.com/CityOfZion/neon-wallet-db#claiming-gas
+
 export default function order(state = {}, action) {
     switch (action.type) {
         case actions.wallet.CREATE_WALLET_START:
@@ -95,12 +108,20 @@ export default function order(state = {}, action) {
             }
         }
         case actions.wallet.GET_TRANSACTION_HISTORY_SUCCESS: {
+            let address = action.address
             let txs = action.transactions.map(tx => {
-                if (tx.neo_sent == true) {
-                    return { type: 'NEO', amount: tx.NEO, txid: tx.txid, block_index: tx.block_index }
-                } else {
-                    return { type: 'GAS', amount: tx.GAS, txid: tx.txid, block_index: tx.block_index }
+                let type = assetType[tx.asset]
+                let amount = tx.amount
+
+                if (type !== 'NEO' && type !== 'GAS') {
+                    amount = amount / NETWORK_STORAGE_MULTIPLIER
                 }
+
+                if (tx.address_to != address) {
+                    // we're sending funds and not receiving, so we need to convert the amount to a negative number
+                    amount = amount * -1
+                }
+                return { type: type, amount: amount, txid: tx.txid, block_index: tx.block_height }
             })
             return {
                 ...state,
@@ -108,11 +129,16 @@ export default function order(state = {}, action) {
             }
         }
         case actions.wallet.GET_AVAILABLE_GAS_CLAIM_SUCCESS:
-            const MAGIC_NETWORK_PROTOCOL_FORMAT = 100000000 // read more here: https://github.com/CityOfZion/neon-wallet-db#claiming-gas
+            let claim_data = action.claimAmounts.to_be_released
+
+            let sum_not_released = 0.0 // The sum of all funds that have to be released before they can be claimed.
+            claim_data.forEach(item => {
+                sum_not_released += item.unclaimed
+            })
             return {
                 ...state,
-                claimAmount: (action.claimAmounts.available + action.claimAmounts.unavailable) / MAGIC_NETWORK_PROTOCOL_FORMAT,
-                claimUnspend: action.claimAmounts.unavailable
+                claimAmount: action.claimAmounts.total_available,
+                claimUnspend: sum_not_released
             }
 
         case actions.wallet.SEND_ASSET_SUCCESS:
