@@ -11,6 +11,8 @@ import long from 'long'
 import { getAssetId } from '../network'
 import { XOR, reverse } from './utils'
 
+
+const NETWORK_STORAGE_MULTIPLIER = 100000000
 const NEP_HEADER = '0142'
 const NEP_FLAG = 'e0'
 const SCRYPT_PARAMS = {
@@ -31,7 +33,7 @@ const SCRYPT_PARAMS = {
 
 /**
 * @typedef {Object} UTXO - Unspent Transaction Output
-* @property {number} index - Previous transactoin index.
+* @property {number} n - Previous transaction index.
 * @property {string} txid - Previous transaction hash.
 * @property {number} value - Unspent amount.
 */
@@ -322,7 +324,7 @@ export function buildContractTransactionData(UTXOs, assetId, publicKeyEncoded, d
  * @param {Number} amountToRecipient - amount of gas to send to self
  * @param {Buffer} publicKeyEncoded - encoded public key 
  */
-export function buildClaimTransactionData(claims, amountToRecipient, publicKeyEncoded) {
+export function buildClaimTransactionData(claims, publicKeyEncoded) {
     let accountAddressHash = getHash(createSignatureScript(publicKeyEncoded)) // own pub key hash
 
     const CLAIM_TRANSACTION_TYPE = 0x02
@@ -335,6 +337,13 @@ export function buildClaimTransactionData(claims, amountToRecipient, publicKeyEn
     const DATA2 = Buffer.from([TRANSACTION_ATTRIBUTES, INPUT_COUNT, OUTPUT_COUNT])
 
     let claimSpecificData = buildInputsDataStructure(claims) // the claims data structure is equal to that of inputs[]
+
+
+    let amountToRecipient = 0.0 // The sum of all funds that have to be released before they can be claimed.
+    claims.forEach(item => {
+        amountToRecipient += item.unclaimed * NETWORK_STORAGE_MULTIPLIER
+    })
+
     const outputData = getOutputEntryFrom(getAssetId('Gas'), amountToRecipient, accountAddressHash)
 
     return Buffer.concat([HEADER, claimSpecificData, DATA2, outputData])
@@ -366,7 +375,6 @@ export function buildOutputDataFrom(amount, totalValueOfInputs, assetId, account
     data.writeInt8(OUTPUT_COUNT, 0)
     offset += 1
 
-    const NETWORK_STORAGE_MULTIPLIER = 100000000
     const amountToRecipient = Number(amount * NETWORK_STORAGE_MULTIPLIER)
     const entry0 = getOutputEntryFrom(assetId, amountToRecipient, destinationAddressHash)
     data.fill(entry0, offset, offset + entry0.length)
@@ -491,7 +499,7 @@ function getInputEntryFrom(utxo) {
     let entry = Buffer.alloc(34)
     let reversedHash = reverse(Buffer.from(utxo.txid, 'hex'))
     entry.fill(reversedHash, 0, 32)
-    entry.writeInt16LE(utxo.index, 32)
+    entry.writeInt16LE(utxo.n, 32)
     return entry
 }
 

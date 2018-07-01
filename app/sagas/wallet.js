@@ -158,7 +158,7 @@ function* retrieveTransactionHistory(address) {
     try {
         yield put({ type: actions.wallet.GET_TRANSACTION_HISTORY })
         const transactions = yield call(getTransactionHistory, address)
-        yield put({ type: actions.wallet.GET_TRANSACTION_HISTORY_SUCCESS, transactions: transactions })
+        yield put({ type: actions.wallet.GET_TRANSACTION_HISTORY_SUCCESS, transactions: transactions, address: address })
     } catch (error) {
         yield put({ type: actions.wallet.GET_TRANSACTION_HISTORY_ERROR, error })
     }
@@ -235,7 +235,6 @@ export function* sendAssetFlow(args) {
 
     try {
         yield call(sendAsset, toAddress, wallet.wif, assetType, amount)
-
         if (toAddress === wallet.address) {
             // Then we're just doing a transaction to release all "unspent_claim", so we can claim the GAS
             // and we don't want to notify the user with an additional dropdown box as we do below
@@ -259,8 +258,8 @@ export function* sendAssetFlow(args) {
                 'error',
                 'Error',
                 'Transaction sending failed.' +
-                    `${blockedDomain}` +
-                    ' not allowed by iOS App Transport Security policy. Please contact the wallet author.'
+                `${blockedDomain}` +
+                ' not allowed by iOS App Transport Security policy. Please contact the wallet author.'
             )
         } else {
             DropDownHolder.getDropDown().alertWithType('error', 'Send', 'Transaction sending failed')
